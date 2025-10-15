@@ -1,5 +1,5 @@
 {
-    "name": "InputSystem_Actions",
+    "name": "InputSystemActions",
     "maps": [
         {
             "name": "Player",
@@ -273,7 +273,7 @@
                 {
                     "name": "",
                     "id": "ff7a8817-273a-46c1-9f7e-8e1a0aebcbb9",
-                    "path": "<Keyboard>/k",
+                    "path": "<Mouse>/rightButton",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
