@@ -1,4 +1,4 @@
-﻿using NUnit.Framework.Constraints;
+using NUnit.Framework.Constraints;
 using System.Collections;
 using System.Threading;
 using Unity.Cinemachine;
@@ -23,7 +23,6 @@ public class PlayerController : MonoBehaviour
     public float diveHeight = 8f;       // how high the dive arc goes
     public float diveDistance = 12f;    // forward velocity
     public float slipDistance = 0.35f;     // sliding distance after landing
-    public float doubleTapTime = 0.25f; // time window between double-space
     public float diveGravity = -20; 
 
 
@@ -60,7 +59,7 @@ public class PlayerController : MonoBehaviour
 
     // dive variables
     bool isDiving = false, canDive = true, isRecoveringRotation = false;
-    float lastJumpTapTime = -1f, slipTimer = 0f, currentDiveSpeed = 0f; // gradually increases for smooth push
+    float slipTimer = 0f, currentDiveSpeed = 0f; // gradually increases for smooth push
 
     Vector3 diveDir;
 
@@ -81,24 +80,23 @@ public class PlayerController : MonoBehaviour
     {
         if (!context.ReadValueAsButton()) return;
 
-        float timeSinceTap = Time.time - lastJumpTapTime;
-        lastJumpTapTime = Time.time;
-
-        // --- double tap detected --- prevent accidental jump → dive spam
-        if (timeSinceTap <= doubleTapTime && !isDiving && canDive)
+        if (characterController.isGrounded)
         {
-            // if second tap comes mid-air, convert jump to dive
-            StartDive();
-            return;
+            if (!isJumping && !isDiving)
+            {
+                // jump instantly
+                verticalVelocity.y = jumpHeight;
+                isJumping = true;
+                canDash = false;
+            }
         }
-
-        // --- first tap ---
-        if (characterController.isGrounded && !isJumping && !isDiving)
+        else
         {
-            // jump instantly
-            verticalVelocity.y = jumpHeight;
-            isJumping = true;
-            canDash = false;
+            // in mid-air: trigger dive
+            if (!isDiving && canDive)
+            {
+                StartDive();
+            }
         }
     }
 
@@ -224,11 +222,8 @@ public class PlayerController : MonoBehaviour
         diveDir = moveDir.magnitude > 0.1f ? moveDir.normalized : transform.forward;
         slipTimer = slipDistance;
 
-        // Start from current vertical speed if mid-air, otherwise use dive height
-        verticalVelocity.y = Mathf.Max(verticalVelocity.y, diveHeight);
-
         // Smooth blend forward force
-        currentDiveSpeed = 0f; // new variable (see below)
+        currentDiveSpeed = 0f;
     }
 
     void HandleDive()
