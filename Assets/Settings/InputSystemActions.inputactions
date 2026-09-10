@@ -1,4 +1,5 @@
 {
+    "version": 1,
     "name": "InputSystemActions",
     "maps": [
         {
@@ -45,15 +46,6 @@
                     "name": "Dash",
                     "type": "Button",
                     "id": "2948bd9d-32b6-4a51-83ff-72b7e08695d6",
-                    "expectedControlType": "",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                },
-                {
-                    "name": "Dive",
-                    "type": "Button",
-                    "id": "2c3a6cff-8661-4065-8b35-76646b336011",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -283,12 +275,12 @@
                 },
                 {
                     "name": "",
-                    "id": "556e6d7a-a8d2-443e-9705-aa296c0518e4",
-                    "path": "<Keyboard>/l",
+                    "id": "a4f81c9b-6d12-4211-9e2a-7164b38d0112",
+                    "path": "<Gamepad>/buttonEast",
                     "interactions": "",
                     "processors": "",
-                    "groups": "",
-                    "action": "Dive",
+                    "groups": "Gamepad",
+                    "action": "Dash",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

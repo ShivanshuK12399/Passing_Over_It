@@ -74,11 +74,41 @@ public class PlayerController : MonoBehaviour
         inputActions.Player.Dash.started += OnDash;
 
         orbitalFollow = freeLookCam.GetComponent<CinemachineOrbitalFollow>();
+
+        GameManager.OnControlModeChanged += HandleControlModeChanged;
+        if (GameManager.Instance != null)
+        {
+            HandleControlModeChanged(GameManager.Instance.UseTouchControls);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        GameManager.OnControlModeChanged -= HandleControlModeChanged;
+    }
+
+    private void HandleControlModeChanged(bool isTouchEnabled)
+    {
+        if (freeLookCam != null)
+        {
+            CinemachineInputAxisController axisController = freeLookCam.GetComponent<CinemachineInputAxisController>();
+            if (axisController != null)
+            {
+                axisController.enabled = !isTouchEnabled;
+            }
+        }
     }
 
     void OnJump(InputAction.CallbackContext context)
     {
         if (!context.ReadValueAsButton()) return;
+
+        if (GameManager.Instance != null)
+        {
+            bool isKeyboardDevice = context.control?.device is Keyboard;
+            if (GameManager.Instance.UseTouchControls && isKeyboardDevice) return;
+            if (!GameManager.Instance.UseTouchControls && !isKeyboardDevice) return;
+        }
 
         if (characterController.isGrounded)
         {
@@ -103,6 +133,13 @@ public class PlayerController : MonoBehaviour
     void OnDash(InputAction.CallbackContext context)
     {
         if (!canDash || isDashing) return; // can only dash if available and not already dashing
+
+        if (GameManager.Instance != null)
+        {
+            bool isKeyboardOrMouseDevice = context.control?.device is Keyboard || context.control?.device is Mouse;
+            if (GameManager.Instance.UseTouchControls && isKeyboardOrMouseDevice) return;
+            if (!GameManager.Instance.UseTouchControls && !isKeyboardOrMouseDevice) return;
+        }
 
         isDashing = true;
         canDash = false;
@@ -142,6 +179,24 @@ public class PlayerController : MonoBehaviour
     {
         // taking input
         Vector2 input = inputActions.Player.Move.ReadValue<Vector2>();
+
+        if (GameManager.Instance != null)
+        {
+            var activeControl = inputActions.Player.Move.activeControl;
+            if (activeControl != null)
+            {
+                bool isKeyboardDevice = activeControl.device is Keyboard;
+                if (GameManager.Instance.UseTouchControls && isKeyboardDevice)
+                {
+                    input = Vector2.zero;
+                }
+                else if (!GameManager.Instance.UseTouchControls && !isKeyboardDevice)
+                {
+                    input = Vector2.zero;
+                }
+            }
+        }
+
         move = new Vector3(input.x, 0, input.y);
 
         float targetAngle = Mathf.Atan2(move.x, move.z) * Mathf.Rad2Deg + cam.eulerAngles.y;
