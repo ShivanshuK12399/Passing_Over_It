@@ -1,0 +1,69 @@
+================================================================================
+CHOSEN NETWORKING SOLUTION: FISH-NET + UNITY GAMING SERVICES (UGS)
+================================================================================
+
+1. OVERVIEW & TECH STACK
+--------------------------------------------------------------------------------
+Game Title: Passing Over It (Bomb-Tag Multiplayer)
+Target Platforms: Android (Google Play) & PC (Steam / itch.io)
+Target Match Size: 10-20 Players per lobby
+Budget: Free tier during development / hobby phase, scalable for indie launch
+
+Selected Tech Stack:
+- Networking Core: Fish-Net (FishNet Networking Evolution)
+- NAT Relay: Unity Relay (UGS)
+- Matchmaking & Lobbies: Unity Lobby (UGS)
+- Authentication: Unity Authentication (UGS)
+
+
+2. WHY FISH-NET + UGS WAS CHOSEN
+--------------------------------------------------------------------------------
+a) True Server Authority & Security:
+   - Crucial for bomb-tag mechanics. Who holds the bomb, countdown timers, and
+     player eliminations are controlled by the server, preventing client hacks.
+
+b) High Performance:
+   - Lowest CPU and bandwidth overhead among Unity networking frameworks.
+   - Smoothly handles 10-20 players syncing movement every frame.
+
+c) Prediction & Reconciliation:
+   - Built-in client-side prediction prevents input delay on fast actions like
+     dashing and diving under ~100ms ping.
+
+d) Cost & Licensing:
+   - Fish-Net: 100% Free & Open Source.
+   - UGS Relay: Free up to 50 Concurrent Users (CCU).
+   - UGS Lobby: Free up to 250 Concurrent Users (CCU).
+   - UGS Auth: Free unlimited anonymous sessions.
+
+e) Matchmaking Flexibility:
+   - Supports both public random matchmaking and private room codes.
+
+
+3. ARCHITECTURE & GAME STATE MANAGEMENT
+--------------------------------------------------------------------------------
+- Room Model: Host-Client over UGS Relay (Host player runs server logic through relay server; no port forwarding required).
+- Bomb Ownership: Server-synced NetworkVariable<ulong> or ServerRPC/ObserversRPC.
+- Player Sync: Fish-Net NetworkTransform with client prediction for fast movement.
+- Round State Machine: Round 1, 2, 3 thresholds and elimination states handled authoritatively by Host/Server.
+
+
+4. IMPLEMENTATION ROADMAP
+--------------------------------------------------------------------------------
+Step 1: Package Installation
+  - Install Fish-Net via Unity Asset Store / UPM.
+  - Install UGS SDKs (com.unity.services.core, relay, lobby, authentication).
+
+Step 2: Core Network Setup
+  - Initialize UGS Services & authenticate anonymously.
+  - Set up RelayManager to create/join relay allocations.
+  - Set up LobbyManager to list public lobbies and handle room codes.
+
+Step 3: Player Controller Refactoring
+  - Add Fish-Net NetworkObject and NetworkTransform components.
+  - Bind PlayerController inputs to NetworkBehaviour methods.
+  - Sync positions, dash/dive state over network.
+
+Step 4: Game & Bomb Logic
+  - Implement authoritative BombManager (countdown timer, tag collision detection, bomb transfer RPCs).
+  - Implement RoundManager (tracking surviving players, round transitions, elimination spectator state).
