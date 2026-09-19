@@ -130,6 +130,7 @@ GameObject:
   - component: {fileID: 62793324}
   - component: {fileID: 62793327}
   - component: {fileID: 62793326}
+  - component: {fileID: 62793328}
   m_Layer: 5
   m_Name: joystick_base
   m_TagString: Untagged
@@ -154,7 +155,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 300, y: 200}
+  m_AnchoredPosition: {x: 400, y: 300}
   m_SizeDelta: {x: 250, y: 250}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &62793326
@@ -195,6 +196,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 62793323}
   m_CullTransparentMesh: 1
+--- !u!114 &62793328
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 62793323}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3f8c410b2e54d92a1c87e9f3b540192, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::JoystickBaseTouchForwarder
+  targetOnScreenStick: {fileID: 234173484}
 --- !u!43 &108454541
 Mesh:
   m_ObjectHideFlags: 0
@@ -947,15 +961,15 @@ MonoBehaviour:
   Radius: 10
   Orbits:
     Top:
-      Radius: 11
+      Radius: 9
       Height: 6
     Center:
-      Radius: 10.5
+      Radius: 8.5
       Height: 1
     Bottom:
-      Radius: 10
+      Radius: 8
       Height: 0
-    SplineCurvature: 0.5
+    SplineCurvature: 0
   RecenteringTarget: 2
   HorizontalAxis:
     Value: 0
@@ -1038,8 +1052,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 194848716}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.002287743, y: 0.00000001668831, z: -3.8178516e-11, w: 0.99999744}
-  m_LocalPosition: {x: 0, y: 1.6516159, z: -10.454781}
+  m_LocalRotation: {x: 0.012495909, y: 0.00000000279375, z: -3.4913166e-11, w: 0.999922}
+  m_LocalPosition: {x: 0, y: 1.6995893, z: -8.443812}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1306,7 +1320,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -505.9, y: 200}
+  m_AnchoredPosition: {x: -400, y: 300}
   m_SizeDelta: {x: 200, y: 200}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &242839106
@@ -8022,11 +8036,13 @@ MonoBehaviour:
   moveSpeed: 10
   turningTime: 0.1
   jumpHeight: 20
+  jumpGravity: -50
+  fallGravity: -80
   dashSpeed: 30
   dashDuration: 0.3
   dashCooldown: 0.3
   diveHeight: 12
-  diveDistance: 10
+  diveDistance: 15
   slipDistance: 0
   diveGravity: -60
   normalControllerHeight: 2
@@ -8034,6 +8050,10 @@ MonoBehaviour:
   freeLookCam: {fileID: 194848721}
   normalDamping: 1
   dashDamping: 0.2
+  useDeadZone: 1
+  deadZoneSize: {x: 0, y: 1.5, z: 0}
+  snapDeadZoneOnDash: 1
+  showDeadZoneGizmos: 1
   characterController: {fileID: 1606568810}
   cam: {fileID: 1779232049}
 --- !u!4 &1606568809
@@ -8998,8 +9018,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1779232045}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.0022877434, y: 0.000000016688313, z: -3.8178675e-11, w: 0.9999974}
-  m_LocalPosition: {x: 0, y: 1.6516159, z: -10.454781}
+  m_LocalRotation: {x: 0.01249591, y: 0.0000000027937497, z: -3.4913173e-11, w: 0.9999219}
+  m_LocalPosition: {x: 0, y: 1.6995893, z: -8.443812}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -10739,7 +10759,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -316.2, y: 400}
+  m_AnchoredPosition: {x: -300, y: 500}
   m_SizeDelta: {x: 200, y: 200}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2107431773

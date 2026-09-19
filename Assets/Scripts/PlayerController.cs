@@ -11,6 +11,8 @@ public class PlayerController : MonoBehaviour
     public float moveSpeed = 5f;
     public float turningTime = 0.1f;
     public float jumpHeight = 20f;
+    public float jumpGravity = -80f;
+    public float fallGravity = -100f;
 
 
     [Header("Dash Variables")]
@@ -36,21 +38,31 @@ public class PlayerController : MonoBehaviour
     public float normalDamping = 1f;     // default smooth follow
     public float dashDamping = 0f;       // no delay (snaps instantly)
 
+    [Header("Camera Dead Zone Settings")]
+    public bool useDeadZone = true;
+    [Tooltip("Half-dimensions of dead zone (X: Horizontal, Y: Vertical, Z: Depth). Camera will not follow player while inside this area.")]
+    public Vector3 deadZoneSize = new Vector3(2f, 1.5f, 2f);
+    [Tooltip("If true, snaps camera target immediately to player when dashing.")]
+    public bool snapDeadZoneOnDash = true;
+    [Tooltip("Show dead zone bounds gizmo in Scene View when selected.")]
+    public bool showDeadZoneGizmos = true;
+
 
     [Header("Refrences")]
     public CharacterController characterController;
     public Transform cam;
     InputSystemActions inputActions;
     CinemachineOrbitalFollow orbitalFollow;
+    Transform cameraTargetProxy;
 
     // movement variables
     float turnVelocity;
-     Vector3 move, moveDir;
+    Vector3 move, moveDir;
 
     // jump & gravity variables
-     float jumpGravity = -80f, fallGravity = -100f, groundedGravity=-1f; //fixedUpdate var jumpGravity = -1f, fallGravity = -8f, groundedGravity=-0.05f;
-     bool isJumpPressed, isJumping;
-     Vector3 verticalVelocity;
+    float groundedGravity=-1f; //fixedUpdate var groundedGravity=-0.05f;
+    bool isJumpPressed, isJumping;
+    Vector3 verticalVelocity;
 
     // dash variables
     bool isDashing = false, canDash = true;
@@ -73,7 +85,17 @@ public class PlayerController : MonoBehaviour
         inputActions.Player.Jump.canceled += OnJump;
         inputActions.Player.Dash.started += OnDash;
 
-        orbitalFollow = freeLookCam.GetComponent<CinemachineOrbitalFollow>();
+        if (freeLookCam != null)
+        {
+            orbitalFollow = freeLookCam.GetComponent<CinemachineOrbitalFollow>();
+
+            // Setup camera target proxy for camera dead zone
+            GameObject targetObj = new GameObject("CameraFollowTarget");
+            cameraTargetProxy = targetObj.transform;
+            cameraTargetProxy.position = transform.position;
+
+            freeLookCam.Target.TrackingTarget = cameraTargetProxy;
+        }
 
         GameManager.OnControlModeChanged += HandleControlModeChanged;
         if (GameManager.Instance != null)
@@ -85,6 +107,11 @@ public class PlayerController : MonoBehaviour
     private void OnDestroy()
     {
         GameManager.OnControlModeChanged -= HandleControlModeChanged;
+
+        if (cameraTargetProxy != null)
+        {
+            Destroy(cameraTargetProxy.gameObject);
+        }
     }
 
     private void HandleControlModeChanged(bool isTouchEnabled)
@@ -354,6 +381,60 @@ public class PlayerController : MonoBehaviour
 
     void SetCameraDamping(float value)
     {
-        orbitalFollow.TrackerSettings.PositionDamping = new Vector3(value, value, value);
+        if (orbitalFollow != null)
+        {
+            orbitalFollow.TrackerSettings.PositionDamping = new Vector3(value, value, value);
+        }
+    }
+
+    void LateUpdate()
+    {
+        UpdateCameraDeadZone();
+    }
+
+    void UpdateCameraDeadZone()
+    {
+        if (cameraTargetProxy == null) return;
+
+        if (!useDeadZone || (isDashing && snapDeadZoneOnDash))
+        {
+            cameraTargetProxy.position = transform.position;
+            return;
+        }
+
+        Vector3 playerPos = transform.position;
+        Vector3 targetPos = cameraTargetProxy.position;
+
+        // Clamp World X
+        float deltaX = playerPos.x - targetPos.x;
+        if (Mathf.Abs(deltaX) > deadZoneSize.x)
+        {
+            targetPos.x = playerPos.x - Mathf.Sign(deltaX) * deadZoneSize.x;
+        }
+
+        // Clamp World Y
+        float deltaY = playerPos.y - targetPos.y;
+        if (Mathf.Abs(deltaY) > deadZoneSize.y)
+        {
+            targetPos.y = playerPos.y - Mathf.Sign(deltaY) * deadZoneSize.y;
+        }
+
+        // Clamp World Z
+        float deltaZ = playerPos.z - targetPos.z;
+        if (Mathf.Abs(deltaZ) > deadZoneSize.z)
+        {
+            targetPos.z = playerPos.z - Mathf.Sign(deltaZ) * deadZoneSize.z;
+        }
+
+        cameraTargetProxy.position = targetPos;
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (!showDeadZoneGizmos || !useDeadZone) return;
+
+        Vector3 center = Application.isPlaying && cameraTargetProxy != null ? cameraTargetProxy.position : transform.position;
+        Gizmos.color = new Color(1f, 0.8f, 0.2f, 0.9f);
+        Gizmos.DrawWireCube(center, deadZoneSize * 2f);
     }
 }
