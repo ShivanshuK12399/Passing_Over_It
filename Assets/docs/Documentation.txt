@@ -1,34 +1,29 @@
- We are making a multiplayer elimination game inspired by "tag" but with bombs in unity6 using net code.
+We are making a multiplayer elimination game inspired by "tag" but with bombs in Unity 6 using Fish-Net and UGS.
 Give the roadmap of development
 
 Game Mechanics:
 - Players start in an arena with obstacles.
-- One or more players start with a bomb.
+- One or more players starts with a bomb.
 - The bomb has a countdown timer (e.g., 20 seconds).
 - Players must pass the bomb by tagging another player before the timer reaches zero.
-- When bomb gets passed the new holder will become the tagger.
-- When the timer runs out, the player holding the bomb is eliminated.
-- Tagger has ability to dash and runner has ability to dive for dodging tagger.
+- When the bomb gets passed, the new holder becomes the tagger (holding the bomb).
+- Tagger has the ability to Dash, and Runners have the ability to Dive for dodging the tagger.
+- When the timer runs out, the player holding the bomb explodes (+1 Death).
+- The last player who passed the bomb to the victim before explosion gets +1 Kill.
+- Exploded player respawns after a 2-second delay at a random spawn position in the arena.
+- A new bomb is immediately assigned randomly to a player.
 
-Round System:
-- The game is divided into 3 rounds.
-- Each round continues until the player count reduces to a set threshold:
-  - Round 1: Continue until X players remain.
-  - Round 2: Continue until Y players remain.
-  - Round 3: Final round, last player standing wins.
-
-Additional Rules:
-- Eliminated players do NOT respawn (they become spectators).
-- At the start of each round, the bomb is randomly assigned to a surviving player.
-- If multiple bombs are desired in later rounds, add them for faster eliminations.
-- To avoid stalemates, if the timer is close to ending and players refuse to take the bomb, the current holder is forced to explode.
-- When last round no sticky bombs will be allowed
+Round & Match System:
+- Single Round Timed Match (e.g., 3-minute match timer).
+- Players continuously respawn upon explosion until match timer reaches zero.
 
 Victory Condition:
-- The last surviving player after Round 3 is the winner.
+- When the match timer ends, players are ranked by Score:
+  Score = (Number of Kills - Number of Times Died).
+- Player with the highest Score wins the match.
 
 Optional Features: will be implements later when game core is ready
 - Power-ups in the arena (speed boost, invisibility for 3s).
 - Sticky bombs which when thrown on players (runner and taggers), they will get stuck to ground for a while. Everyone will have 2 sticky bombs in start and if eleminated their left over bombs can be picked by others
 - Arena may shrink over time to increase tension.
-- Scoreboard shows survival time, number of passes, and eliminations.
+- Scoreboard shows survival time, kills, and eliminations.

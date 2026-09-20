@@ -45,6 +45,11 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
+        if (FishNet.InstanceFinder.TimeManager != null)
+        {
+            FishNet.InstanceFinder.TimeManager.SetTickRate(60);
+        }
+
         // Notify subscribers of initial state
         OnControlModeChanged?.Invoke(useTouchControls);
     }
