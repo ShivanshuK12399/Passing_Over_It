@@ -1,69 +1,68 @@
 ================================================================================
-CHOSEN NETWORKING SOLUTION: FISH-NET + UNITY GAMING SERVICES (UGS)
+CHOSEN NETWORKING SOLUTION: FISH-NET + DEDICATED CLOUD SERVER ARCHITECTURE
 ================================================================================
 
 1. OVERVIEW & TECH STACK
 --------------------------------------------------------------------------------
 Game Title: Passing Over It (Bomb-Tag Multiplayer)
 Target Platforms: Android (Google Play) & PC (Steam / itch.io)
-Target Match Size: 10-20 Players per lobby
-Budget: Free tier during development / hobby phase, scalable for indie launch
+Target Match Size: 10-20 Players per server instance
+Server Host Target: Linux x86_64 (Ubuntu / Debian VPS) & Windows Dedicated Server
+Local Test Target: Local PC Standalone Dedicated Server process + Unity Editor Client
 
 Selected Tech Stack:
 - Networking Core: Fish-Net (FishNet Networking Evolution)
-- NAT Relay: Unity Relay (UGS)
-- Matchmaking & Lobbies: Unity Lobby (UGS)
-- Authentication: Unity Authentication (UGS)
+- Transport Protocol: Tugboat Transport (Direct UDP Socket)
+- Server Architecture: Headless / Standalone Dedicated Cloud Server
+- Connection Mode: Direct IP & Port (Default: 127.0.0.1:7777 for local test, VPS Public IP for launch)
 
 
-2. WHY FISH-NET + UGS WAS CHOSEN
+2. WHY DEDICATED CLOUD SERVER WAS CHOSEN OVER HOST-CLIENT
 --------------------------------------------------------------------------------
-a) True Server Authority & Security:
-   - Crucial for bomb-tag mechanics. Who holds the bomb, countdown timers, and
-     player eliminations are controlled by the server, preventing client hacks.
+a) 100% Server Authority & Security:
+   - Crucial for bomb-tag mechanics. Bomb ownership, tag collision validation, countdown
+     timers, and round eliminations are processed strictly by the dedicated server process,
+     preventing host migration drops and client-side memory editing hacks.
 
-b) High Performance:
-   - Lowest CPU and bandwidth overhead among Unity networking frameworks.
-   - Smoothly handles 10-20 players syncing movement every frame.
+b) Zero Host Lag / Asymmetry:
+   - In Host-Client, the host player has 0ms latency while other players suffer ping lag.
+     A Dedicated Server treats all 10-20 players equally, providing smooth, fair gameplay.
 
-c) Prediction & Reconciliation:
-   - Built-in client-side prediction prevents input delay on fast actions like
-     dashing and diving under ~100ms ping.
+c) Highest Performance & Bandwidth Efficiency:
+   - Tugboat (UDP socket transport) combined with Fish-Net delivers minimal CPU overhead.
+   - Headless server builds run without graphics rendering (-nographics -batchmode), consuming <150MB RAM.
 
-d) Cost & Licensing:
-   - Fish-Net: 100% Free & Open Source.
-   - UGS Relay: Free up to 50 Concurrent Users (CCU).
-   - UGS Lobby: Free up to 250 Concurrent Users (CCU).
-   - UGS Auth: Free unlimited anonymous sessions.
+d) Built-in Client Prediction & Reconciliation:
+   - Fish-Net's client-side prediction prevents input delay on fast movement, dashing, and diving.
 
-e) Matchmaking Flexibility:
-   - Supports both public random matchmaking and private room codes.
+e) Flexible Hosting & Scaling:
+   - Free local testing on developer PC during build/iteration phase.
+   - Low-cost deployment to any Linux VPS (Ubuntu/Debian) or Windows Server instance.
 
 
 3. ARCHITECTURE & GAME STATE MANAGEMENT
 --------------------------------------------------------------------------------
-- Room Model: Host-Client over UGS Relay (Host player runs server logic through relay server; no port forwarding required).
+- Server Execution: Standalone executable automatically parses command-line arguments (-batchmode -nographics -port 7777 -maxplayers 20).
+- Auto Scene Load: Upon server start, DedicatedServerManager automatically loads the Arena scene (Build Index 1) and listens for client UDP sockets.
 - Bomb Ownership: Server-synced NetworkVariable<ulong> or ServerRPC/ObserversRPC.
 - Player Sync: Fish-Net NetworkTransform with client prediction for fast movement.
-- Round State Machine: Round 1, 2, 3 thresholds and elimination states handled authoritatively by Host/Server.
+- Round State Machine: Round 1, 2, 3 thresholds and elimination states handled authoritatively by Dedicated Server.
 
 
-4. IMPLEMENTATION ROADMAP
+4. IMPLEMENTATION ROADMAP & WORKFLOW
 --------------------------------------------------------------------------------
-Step 1: Package Installation
+Step 1: Core Setup
   - Install Fish-Net via Unity Asset Store / UPM.
-  - Install UGS SDKs (com.unity.services.core, relay, lobby, authentication).
+  - Setup Tugboat transport default port (7777 UDP).
 
-Step 2: Core Network Setup
-  - Initialize UGS Services & authenticate anonymously.
-  - Set up RelayManager to create/join relay allocations.
-  - Set up LobbyManager to list public lobbies and handle room codes.
+Step 2: Server Bootstrapping & Connection Managers
+  - Implement ServerCommandLineArgs.cs to parse CLI flags (-port, -maxplayers, -dedicated).
+  - Implement DedicatedServerManager.cs for server startup and client IP connection handling.
 
-Step 3: Player Controller Refactoring
-  - Add Fish-Net NetworkObject and NetworkTransform components.
-  - Bind PlayerController inputs to NetworkBehaviour methods.
-  - Sync positions, dash/dive state over network.
+Step 3: UI & In-Game Overlay
+  - Implement MultiplayerMenuUI.cs with Direct IP & Port inputs + Quick Localhost (127.0.0.1:7777) preset.
+  - Implement InGameNetworkHUD.cs to display server IP, port, ping, and player connection stats.
 
-Step 4: Game & Bomb Logic
-  - Implement authoritative BombManager (countdown timer, tag collision detection, bomb transfer RPCs).
-  - Implement RoundManager (tracking surviving players, round transitions, elimination spectator state).
+Step 4: Local PC Testing & VPS Deployment
+  - Local PC Testing: Build Windows Dedicated Server or run executable with -batchmode flag. Connect from Unity Editor as Client.
+  - VPS Deployment: Build Linux x86_64 server build, upload to Linux VPS, configure firewall UDP port 7777, and run as systemd background service.

@@ -1,185 +1,159 @@
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using Unity.Services.Lobbies.Models;
 using FishNet;
 using FishNet.Managing.Scened;
 
 namespace PassingOverIt.Networking
 {
     /// <summary>
-    /// Streamlined Canvas UI controller for Direct-to-Arena Multiplayer Host & Join flow.
-    /// Immediately loads Scene 1 (Build Index 1) upon hosting or joining, copying the room code to clipboard.
+    /// Menu UI controller for Dedicated Server connections.
+    /// Allows inputting Server IP & Port, quick one-click Localhost (127.0.0.1:7777) testing,
+    /// and initiating local server processes.
     /// </summary>
     [DisallowMultipleComponent]
     public class MultiplayerMenuUI : MonoBehaviour
     {
         [Header("Buttons")]
-        [SerializeField] private Button hostButton;
-        [SerializeField] private Button joinButton;
-        [SerializeField] private Button quickJoinButton;
+        [SerializeField] private Button connectButton;
+        [SerializeField] private Button localhostConnectButton;
+        [SerializeField] private Button startLocalServerButton;
 
         [Header("Inputs & Displays")]
-        [SerializeField] private TMP_InputField roomCodeInputField;
+        [SerializeField] private TMP_InputField serverIpInputField;
+        [SerializeField] private TMP_InputField serverPortInputField;
         [SerializeField] private TMP_Text statusMessageText;
-        [SerializeField] private TMP_InputField lobbyNameInputField;
 
-        [Header("Settings & Scene Flow")]
-        [SerializeField] private int maxPlayersPerLobby = 20;
-        [SerializeField] private bool loadSceneOnConnect = true;
+        [Header("Preset Options")]
+        [SerializeField] private string defaultLocalhostIP = "127.0.0.1";
+        [SerializeField] private string defaultPort = "7777";
         [SerializeField] private int targetSceneIndex = 1;
 
         private void Start()
         {
+            SetupInputDefaults();
             SetupButtonListeners();
-            UpdateStatus("Ready to connect.");
+            UpdateStatus("Ready to connect to Dedicated Server.");
         }
 
         private void OnEnable()
         {
-            if (UGSManager.Instance != null)
+            if (DedicatedServerManager.Instance != null)
             {
-                UGSManager.Instance.OnAuthFailed += HandleAuthFailed;
-                UGSManager.Instance.OnRelayFailed += HandleRelayFailed;
-            }
-
-            if (LobbyManager.Instance != null)
-            {
-                LobbyManager.Instance.OnLobbyError += HandleLobbyError;
+                DedicatedServerManager.Instance.OnClientConnectedEvent += HandleClientConnected;
+                DedicatedServerManager.Instance.OnClientDisconnectedEvent += HandleClientDisconnected;
+                DedicatedServerManager.Instance.OnConnectionErrorEvent += HandleConnectionError;
+                DedicatedServerManager.Instance.OnServerStartedEvent += HandleServerStarted;
             }
         }
 
         private void OnDisable()
         {
-            if (UGSManager.Instance != null)
+            if (DedicatedServerManager.Instance != null)
             {
-                UGSManager.Instance.OnAuthFailed -= HandleAuthFailed;
-                UGSManager.Instance.OnRelayFailed -= HandleRelayFailed;
+                DedicatedServerManager.Instance.OnClientConnectedEvent -= HandleClientConnected;
+                DedicatedServerManager.Instance.OnClientDisconnectedEvent -= HandleClientDisconnected;
+                DedicatedServerManager.Instance.OnConnectionErrorEvent -= HandleConnectionError;
+                DedicatedServerManager.Instance.OnServerStartedEvent -= HandleServerStarted;
             }
+        }
 
-            if (LobbyManager.Instance != null)
+        private void SetupInputDefaults()
+        {
+            if (serverIpInputField != null && string.IsNullOrWhiteSpace(serverIpInputField.text))
             {
-                LobbyManager.Instance.OnLobbyError -= HandleLobbyError;
+                serverIpInputField.text = defaultLocalhostIP;
+            }
+            if (serverPortInputField != null && string.IsNullOrWhiteSpace(serverPortInputField.text))
+            {
+                serverPortInputField.text = defaultPort;
             }
         }
 
         private void SetupButtonListeners()
         {
-            if (hostButton != null) hostButton.onClick.AddListener(OnHostClicked);
-            if (joinButton != null) joinButton.onClick.AddListener(OnJoinClicked);
-            if (quickJoinButton != null) quickJoinButton.onClick.AddListener(OnQuickJoinClicked);
+            if (connectButton != null) connectButton.onClick.AddListener(OnConnectClicked);
+            if (localhostConnectButton != null) localhostConnectButton.onClick.AddListener(OnLocalhostConnectClicked);
+            if (startLocalServerButton != null) startLocalServerButton.onClick.AddListener(OnStartLocalServerClicked);
         }
 
-        public async void OnHostClicked()
+        public void OnConnectClicked()
         {
+            string ip = serverIpInputField != null ? serverIpInputField.text.Trim() : defaultLocalhostIP;
+            string portStr = serverPortInputField != null ? serverPortInputField.text.Trim() : defaultPort;
+
+            if (!ushort.TryParse(portStr, out ushort port))
+            {
+                port = ServerCommandLineArgs.DefaultPort;
+            }
+
             SetButtonsInteractable(false);
-            UpdateStatus("Initializing Host & Relay...");
+            UpdateStatus($"Connecting to Dedicated Server at {ip}:{port}...");
 
-            string relayCode = await UGSManager.Instance.StartRelayHostAsync(maxPlayersPerLobby);
-            if (string.IsNullOrEmpty(relayCode))
+            if (DedicatedServerManager.Instance != null)
             {
-                SetButtonsInteractable(true);
-                return;
-            }
-
-            UpdateStatus("Creating UGS Lobby...");
-            string lobbyName = lobbyNameInputField != null && !string.IsNullOrWhiteSpace(lobbyNameInputField.text)
-                ? lobbyNameInputField.text
-                : "Passing Over It Lobby";
-
-            Lobby lobby = await LobbyManager.Instance.CreateLobbyAsync(lobbyName, maxPlayersPerLobby, relayCode);
-            if (lobby != null)
-            {
-                // Auto-copy Room Code to clipboard for easy sharing
-                GUIUtility.systemCopyBuffer = lobby.LobbyCode;
-                UpdateStatus($"Lobby Created! Code '{lobby.LobbyCode}' copied to clipboard.");
-
-                if (loadSceneOnConnect)
-                {
-                    UpdateStatus($"Entering Arena (Build Index {targetSceneIndex})...");
-                    LoadGameSceneServer();
-                }
-            }
-
-            SetButtonsInteractable(true);
-        }
-
-        public async void OnJoinClicked()
-        {
-            if (roomCodeInputField == null || string.IsNullOrWhiteSpace(roomCodeInputField.text))
-            {
-                UpdateStatus("Please enter a valid Room Code.");
-                return;
-            }
-
-            string inputCode = roomCodeInputField.text.Trim();
-            SetButtonsInteractable(false);
-            UpdateStatus($"Joining Lobby '{inputCode}'...");
-
-            Lobby lobby = await LobbyManager.Instance.JoinLobbyByCodeAsync(inputCode);
-            if (lobby == null)
-            {
-                SetButtonsInteractable(true);
-                return;
-            }
-
-            UpdateStatus("Connecting to Relay Server...");
-            string relayCode = LobbyManager.Instance.GetRelayJoinCode(lobby);
-            bool success = await UGSManager.Instance.StartRelayClientAsync(relayCode);
-
-            if (success)
-            {
-                UpdateStatus($"Connected! Entering Arena...");
-            }
-
-            SetButtonsInteractable(true);
-        }
-
-        public async void OnQuickJoinClicked()
-        {
-            SetButtonsInteractable(false);
-            UpdateStatus("Searching for open public lobby...");
-
-            Lobby lobby = await LobbyManager.Instance.QuickJoinLobbyAsync();
-            if (lobby == null)
-            {
-                SetButtonsInteractable(true);
-                return;
-            }
-
-            UpdateStatus("Connecting to Relay Server...");
-            string relayCode = LobbyManager.Instance.GetRelayJoinCode(lobby);
-            bool success = await UGSManager.Instance.StartRelayClientAsync(relayCode);
-
-            if (success)
-            {
-                UpdateStatus($"Quick Joined! Entering Arena...");
-            }
-
-            SetButtonsInteractable(true);
-        }
-
-        private void LoadGameSceneServer()
-        {
-            string scenePath = UnityEngine.SceneManagement.SceneUtility.GetScenePathByBuildIndex(targetSceneIndex);
-            string sceneName = !string.IsNullOrEmpty(scenePath)
-                ? System.IO.Path.GetFileNameWithoutExtension(scenePath)
-                : "GameScene";
-
-            if (InstanceFinder.SceneManager != null)
-            {
-                SceneLoadData sld = new SceneLoadData(sceneName)
-                {
-                    ReplaceScenes = ReplaceOption.All
-                };
-                InstanceFinder.SceneManager.LoadGlobalScenes(sld);
+                DedicatedServerManager.Instance.StartClient(ip, port);
             }
             else
             {
-                UnityEngine.SceneManagement.SceneManager.LoadScene(targetSceneIndex);
+                UpdateStatus("Error: DedicatedServerManager not found in scene!");
+                SetButtonsInteractable(true);
             }
+        }
+
+        public void OnLocalhostConnectClicked()
+        {
+            if (serverIpInputField != null) serverIpInputField.text = defaultLocalhostIP;
+            if (serverPortInputField != null) serverPortInputField.text = defaultPort;
+
+            OnConnectClicked();
+        }
+
+        public void OnStartLocalServerClicked()
+        {
+            string portStr = serverPortInputField != null ? serverPortInputField.text.Trim() : defaultPort;
+            if (!ushort.TryParse(portStr, out ushort port))
+            {
+                port = ServerCommandLineArgs.DefaultPort;
+            }
+
+            SetButtonsInteractable(false);
+            UpdateStatus($"Starting local server on port {port}...");
+
+            if (DedicatedServerManager.Instance != null)
+            {
+                DedicatedServerManager.Instance.StartDedicatedServer(port);
+            }
+            else
+            {
+                UpdateStatus("Error: DedicatedServerManager not found in scene!");
+                SetButtonsInteractable(true);
+            }
+        }
+
+        private void HandleClientConnected()
+        {
+            UpdateStatus("Successfully connected to Dedicated Server! Entering Arena...");
+            SetButtonsInteractable(true);
+        }
+
+        private void HandleClientDisconnected()
+        {
+            UpdateStatus("Disconnected from Dedicated Server.");
+            SetButtonsInteractable(true);
+        }
+
+        private void HandleServerStarted()
+        {
+            UpdateStatus($"Local Dedicated Server started successfully on port {DedicatedServerManager.Instance?.ActivePort ?? 7777}.");
+            SetButtonsInteractable(true);
+        }
+
+        private void HandleConnectionError(string message)
+        {
+            UpdateStatus($"Connection Failed: {message}");
+            SetButtonsInteractable(true);
         }
 
         private void UpdateStatus(string text)
@@ -193,13 +167,9 @@ namespace PassingOverIt.Networking
 
         private void SetButtonsInteractable(bool interactable)
         {
-            if (hostButton != null) hostButton.interactable = interactable;
-            if (joinButton != null) joinButton.interactable = interactable;
-            if (quickJoinButton != null) quickJoinButton.interactable = interactable;
+            if (connectButton != null) connectButton.interactable = interactable;
+            if (localhostConnectButton != null) localhostConnectButton.interactable = interactable;
+            if (startLocalServerButton != null) startLocalServerButton.interactable = interactable;
         }
-
-        private void HandleAuthFailed(string msg) => UpdateStatus($"Auth Error: {msg}");
-        private void HandleRelayFailed(string msg) => UpdateStatus($"Relay Error: {msg}");
-        private void HandleLobbyError(string msg) => UpdateStatus($"Lobby Error: {msg}");
     }
 }

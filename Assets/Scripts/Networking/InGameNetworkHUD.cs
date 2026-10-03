@@ -1,101 +1,81 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using FishNet;
+using FishNet.Managing.Timing;
 
 namespace PassingOverIt.Networking
 {
     /// <summary>
-    /// In-Game HUD overlay for displaying the Room Code, auto-copy button,
-    /// and connection status while playing in the Arena.
+    /// In-Game HUD overlay displaying Dedicated Server IP:Port connection details, ping, and server status.
     /// </summary>
     [DisallowMultipleComponent]
     public class InGameNetworkHUD : MonoBehaviour
     {
         [Header("UI References")]
-        [SerializeField] private TMP_Text roomCodeText;
-        [SerializeField] private Button copyCodeButton;
+        [SerializeField] private TMP_Text serverInfoText;
+        [SerializeField] private TMP_Text pingText;
+        [SerializeField] private Button copyInfoButton;
+
+        private TimeManager timeManager;
 
         private void Start()
         {
-            FindReferencesIfUnassigned();
 
-            if (copyCodeButton != null)
+            if (copyInfoButton != null)
             {
-                copyCodeButton.onClick.AddListener(OnCopyCodeClicked);
+                copyInfoButton.onClick.AddListener(OnCopyInfoClicked);
             }
 
-            UpdateRoomCodeDisplay();
+            if (InstanceFinder.NetworkManager != null)
+            {
+                timeManager = InstanceFinder.TimeManager;
+            }
+
+            UpdateServerInfoDisplay();
         }
 
-        private void FindReferencesIfUnassigned()
+        private void Update()
         {
-            if (roomCodeText == null)
+            if (pingText != null && timeManager != null)
             {
-                TMP_Text[] texts = FindObjectsByType<TMP_Text>(FindObjectsSortMode.None);
-                foreach (var txt in texts)
+                long roundTripTimeMs = timeManager.RoundTripTime;
+                pingText.text = $"Ping: {roundTripTimeMs} ms";
+            }
+        }
+
+        private void UpdateServerInfoDisplay()
+        {
+            if (serverInfoText != null)
+            {
+                if (DedicatedServerManager.Instance != null)
                 {
-                    if (txt.name.ToLower().Contains("code") || txt.name.ToLower().Contains("room") || txt.name.ToLower().Contains("hud"))
+                    if (DedicatedServerManager.Instance.IsDedicatedServer)
                     {
-                        roomCodeText = txt;
-                        break;
+                        serverInfoText.text = $"[SERVER MODE] Port: {DedicatedServerManager.Instance.ActivePort}";
+                    }
+                    else
+                    {
+                        serverInfoText.text = $"Server: {DedicatedServerManager.Instance.ActiveServerIP}:{DedicatedServerManager.Instance.ActivePort}";
                     }
                 }
-            }
-
-            if (copyCodeButton == null)
-            {
-                Button[] buttons = FindObjectsByType<Button>(FindObjectsSortMode.None);
-                foreach (var btn in buttons)
+                else
                 {
-                    if (btn.name.ToLower().Contains("copy") || btn.name.ToLower().Contains("code"))
-                    {
-                        copyCodeButton = btn;
-                        break;
-                    }
+                    serverInfoText.text = "Server: Connected";
                 }
             }
         }
 
-        private void UpdateRoomCodeDisplay()
+        private void OnCopyInfoClicked()
         {
-            if (LobbyManager.Instance != null && LobbyManager.Instance.JoinedLobby != null)
-            {
-                string code = LobbyManager.Instance.JoinedLobby.LobbyCode;
-                if (roomCodeText != null)
-                {
-                    roomCodeText.text = $"{code}";
-                }
-            }
-            else if (UGSManager.Instance != null && !string.IsNullOrEmpty(UGSManager.Instance.HostJoinCode))
-            {
-                if (roomCodeText != null)
-                {
-                    roomCodeText.text = $"{UGSManager.Instance.HostJoinCode}";
-                }
-            }
-        }
+            string infoToCopy = serverInfoText != null ? serverInfoText.text : "127.0.0.1:7777";
+            GUIUtility.systemCopyBuffer = infoToCopy;
 
-        private void OnCopyCodeClicked()
-        {
-            string codeToCopy = null;
-            if (LobbyManager.Instance != null && LobbyManager.Instance.JoinedLobby != null)
+            if (serverInfoText != null)
             {
-                codeToCopy = LobbyManager.Instance.JoinedLobby.LobbyCode;
+                serverInfoText.text = $"COPIED: {infoToCopy}";
             }
-            else if (UGSManager.Instance != null)
-            {
-                codeToCopy = UGSManager.Instance.HostJoinCode;
-            }
-
-            if (!string.IsNullOrEmpty(codeToCopy))
-            {
-                GUIUtility.systemCopyBuffer = codeToCopy;
-                if (roomCodeText != null)
-                {
-                    roomCodeText.text = $"COPIED: {codeToCopy}";
-                }
-                Invoke(nameof(UpdateRoomCodeDisplay), 2.0f);
-            }
+            Invoke(nameof(UpdateServerInfoDisplay), 2.0f);
         }
     }
 }
