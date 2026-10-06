@@ -67,9 +67,69 @@
   - [x] Verify latency stability and connection handling under local socket conditions.
 
   
-## Phase 6 Cloud VPS Deployment (Linux / Windows)
-  - [ ] Build Linux x86_64 Dedicated Server target in Unity.
-  - [ ] Upload build to Linux VPS (Ubuntu/Debian).
-  - [ ] Open UDP Port `7777` on VPS Firewall (`sudo ufw allow 7777/udp`).
-  - [ ] Run server executable headlessly or set up `systemd` service for 24/7 background operation.
-  - [ ] Connect PC and Mobile clients to VPS Public IP address.
+## 🏃‍♂️ Phase 6: Character Animation Setup & Network Synchronization
+- [ ] **6.1 Animator Controller Setup (`PlayerAnimatorController.controller`)**
+  - [ ] **Base Movement Layer**: Setup BlendTree for Idle/Walk/Run driven by `Speed` float.
+  - [ ] **Air & Action States**: Add `JumpStart`, `InAir`, `Land`, `Dash`, and `Dive` states with state transitions.
+  - [ ] **Upper-Body Layer (Avatar Mask)**: Create isolated upper-body layer for `HoldBomb` pose and `PassBomb` swipe gesture.
+- [ ] **6.2 Dedicated Animation Controller Script (`PlayerAnimation.cs`)**
+  - [ ] Create `PlayerAnimation.cs` component attached to Player prefab.
+  - [ ] Read movement parameters from `PlayerController.cs` (`Speed`, `IsGrounded`, `IsDashing`, `IsDiving`, `IsJumping`).
+  - [ ] Feed animator floats, bools, and triggers locally.
+- [ ] **6.3 Fish-Net Network Animator Integration (`NetworkAnimator`)**
+  - [ ] Attach Fish-Net `NetworkAnimator` component to Player prefab.
+  - [ ] Bind component to Player `Animator`.
+  - [ ] Configure synchronized animation parameters & triggers across server and observers for low-latency visual sync.
+
+---
+
+## 💣 Phase 7: Bomb Tagging & Passing Mechanism
+- [ ] **7.1 Server-Authoritative Bomb State (`BombController.cs` / `BombPassManager.cs`)**
+  - [ ] Create synchronized bomb state tracking current bomb carrier (`NetworkBehaviour` with `SyncVar` / RPCs).
+  - [ ] Attach visual Bomb prefab / indicator to carrying player's hand/head socket.
+- [ ] **7.2 Collision & Touch Tagging Logic**
+  - [ ] Implement collision trigger / SphereCast on player (`OnTriggerEnter`).
+  - [ ] Detect physical contact between Bomb Carrier and target player.
+  - [ ] Enable **Dash-Tag**: Allow player to dash into another player to instantly pass the bomb.
+- [ ] **7.3 Tag Immunity & Cooldown**
+  - [ ] Implement **1.5-second Tag Immunity** window on receiving player to prevent instant back-tagging.
+  - [ ] Broadcast visual immunity aura / feedback during cooldown.
+- [ ] **7.4 Audio & Visual Tag Feedback**
+  - [ ] Play tag swipe SFX and spawn particle hit effect on successful pass.
+  - [ ] Update character outline / beacon light for current bomb carrier.
+
+---
+
+## ⏱️ Phase 8: Round Loop, Bomb Timer, Explosion & 2-Second Respawn
+- [ ] **8.1 Synchronized Round & Bomb Timer (`RoundManager.cs`)**
+  - [ ] Implement server-authoritative countdown timer (e.g. 30s - 45s round duration).
+  - [ ] Sync remaining round time to all connected clients.
+- [ ] **8.2 Bomb Explosion & Carrier Knockback**
+  - [ ] When timer hits 0s, trigger bomb explosion event on server.
+  - [ ] Spawn explosion particle effect and play loud explosion SFX at carrier position.
+  - [ ] Put exploded player into temporary ragdoll / knockback state.
+- [ ] **8.3 2-Second Respawn System**
+  - [ ] Start 2-second respawn delay timer for exploded player.
+  - [ ] Respawn exploded player at a random spawn point in the arena via `NetworkPlayerSpawner.cs`.
+  - [ ] Server assigns bomb to a new random player to initiate the next round.
+
+---
+
+## 📺 Phase 9: HUD & UI Network Synchronization
+- [ ] **9.1 In-Game Bomb HUD (`InGameNetworkHUD.cs` / `UIController.cs`)**
+  - [ ] Display prominent countdown timer at top center of screen with color warning (Red under 5s).
+  - [ ] Display "YOU HAVE THE BOMB!" localized warning header for local bomb carrier.
+- [ ] **9.2 Carrier Pointer & Directional UI**
+  - [ ] Render floating arrow / off-screen pointer pointing towards current bomb carrier.
+- [ ] **9.3 Respawn UI Overlay**
+  - [ ] Display 2-second respawn countdown prompt ("Respawning in 2... 1...") for dead player.
+
+---
+
+## ☁️ Phase 10: Dedicated Cloud VPS Deployment (Linux / Windows)
+- [ ] Build Linux x86_64 Dedicated Server target in Unity.
+- [ ] Upload build to Linux VPS (Ubuntu/Debian).
+- [ ] Open UDP Port `7777` on VPS Firewall (`sudo ufw allow 7777/udp`).
+- [ ] Run server executable headlessly or set up `systemd` service for 24/7 background operation.
+- [ ] Connect PC and Mobile clients to VPS Public IP address.
+

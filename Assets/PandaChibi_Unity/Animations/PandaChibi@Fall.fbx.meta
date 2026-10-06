@@ -1,0 +1,555 @@
+fileFormatVersion: 2
+guid: ef95dd150cb34e944acc1e264bc1a3f7
+ModelImporter:
+  serializedVersion: 24200
+  internalIDToNameTable: []
+  externalObjects: {}
+  materials:
+    materialImportMode: 2
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 3
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations:
+    - serializedVersion: 16
+      name: Fall
+      takeName: Fall
+      internalID: 5917537482288442099
+      firstFrame: 1
+      lastFrame: 21
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 1
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask:
+      - path: 
+        weight: 1
+      - path: PandaChibi_Rig
+        weight: 1
+      - path: PandaChibi_Rig/Hips
+        weight: 1
+      - path: PandaChibi_Rig/Hips/LeftUpperLeg
+        weight: 1
+      - path: PandaChibi_Rig/Hips/LeftUpperLeg/LeftLowerLeg
+        weight: 1
+      - path: PandaChibi_Rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot
+        weight: 1
+      - path: PandaChibi_Rig/Hips/RightUpperLeg
+        weight: 1
+      - path: PandaChibi_Rig/Hips/RightUpperLeg/RightLowerLeg
+        weight: 1
+      - path: PandaChibi_Rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot
+        weight: 1
+      - path: PandaChibi_Rig/Hips/Spine
+        weight: 1
+      - path: PandaChibi_Rig/Hips/Spine/Chest
+        weight: 1
+      - path: PandaChibi_Rig/Hips/Spine/Chest/LeftShoulder
+        weight: 1
+      - path: PandaChibi_Rig/Hips/Spine/Chest/LeftShoulder/LeftUpperArm
+        weight: 1
+      - path: PandaChibi_Rig/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm
+        weight: 1
+      - path: PandaChibi_Rig/Hips/Spine/Chest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand
+        weight: 1
+      - path: PandaChibi_Rig/Hips/Spine/Chest/Neck
+        weight: 1
+      - path: PandaChibi_Rig/Hips/Spine/Chest/Neck/Head
+        weight: 1
+      - path: PandaChibi_Rig/Hips/Spine/Chest/Neck/Head/Ear_L
+        weight: 1
+      - path: PandaChibi_Rig/Hips/Spine/Chest/Neck/Head/Ear_R
+        weight: 1
+      - path: PandaChibi_Rig/Hips/Spine/Chest/RightShoulder
+        weight: 1
+      - path: PandaChibi_Rig/Hips/Spine/Chest/RightShoulder/RightUpperArm
+        weight: 1
+      - path: PandaChibi_Rig/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm
+        weight: 1
+      - path: PandaChibi_Rig/Hips/Spine/Chest/RightShoulder/RightUpperArm/RightLowerArm/RightHand
+        weight: 1
+      - path: PandaChibi_Rig/Hips/Tail
+        weight: 1
+      maskType: 0
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0.9
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+  referencedClips: []
+  importAnimation: 1
+  humanDescription:
+    serializedVersion: 3
+    human:
+    - boneName: Hips
+      humanName: Hips
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftUpperLeg
+      humanName: LeftUpperLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightUpperLeg
+      humanName: RightUpperLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftLowerLeg
+      humanName: LeftLowerLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightLowerLeg
+      humanName: RightLowerLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftFoot
+      humanName: LeftFoot
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightFoot
+      humanName: RightFoot
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Spine
+      humanName: Spine
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Chest
+      humanName: Chest
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Neck
+      humanName: Neck
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Head
+      humanName: Head
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftShoulder
+      humanName: LeftShoulder
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightShoulder
+      humanName: RightShoulder
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftUpperArm
+      humanName: LeftUpperArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightUpperArm
+      humanName: RightUpperArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftLowerArm
+      humanName: LeftLowerArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightLowerArm
+      humanName: RightLowerArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftHand
+      humanName: LeftHand
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightHand
+      humanName: RightHand
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Ear_L
+      humanName: LeftEye
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Ear_R
+      humanName: RightEye
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    skeleton:
+    - name: PandaChibi(Clone)
+      parentName: 
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: PandaChibi_Arm_L
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: PandaChibi_Arm_R
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: PandaChibi_Body
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: PandaChibi_Bow_Knot
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: PandaChibi_Bow_Loop_L
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: PandaChibi_Bow_Loop_R
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: PandaChibi_Bow_Ribbon_L
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: PandaChibi_Bow_Ribbon_R
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: PandaChibi_Ear_L
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: PandaChibi_Ear_R
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: PandaChibi_Face
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: PandaChibi_Hood
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: PandaChibi_Hood_Knob
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: PandaChibi_Leg_L
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: PandaChibi_Leg_R
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: PandaChibi_Rig
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Hips
+      parentName: PandaChibi_Rig
+      position: {x: -0, y: 0, z: 0.16421053}
+      rotation: {x: 0.7071067, y: -0.00000004214684, z: -0.00000004214684, w: 0.7071068}
+      scale: {x: 1, y: 0.99999994, z: 0.99999994}
+    - name: Spine
+      parentName: Hips
+      position: {x: -0, y: 0.09684214, z: 0}
+      rotation: {x: -3.5527137e-15, y: 0.00000005960464, z: 2.1175821e-22, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Chest
+      parentName: Spine
+      position: {x: -0, y: 0.07157898, z: 0}
+      rotation: {x: -3.5527137e-15, y: -3.552714e-15, z: -5.04871e-29, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Neck
+      parentName: Chest
+      position: {x: -0, y: 0.08000004, z: 0}
+      rotation: {x: -3.5527137e-15, y: 6.352747e-22, z: 0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Head
+      parentName: Neck
+      position: {x: -0, y: 0.033684254, z: 0}
+      rotation: {x: -3.5527137e-15, y: -2.5243552e-29, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Ear_L
+      parentName: Head
+      position: {x: -0.18842106, y: 0.40210527, z: -0.010526316}
+      rotation: {x: 0.000000016610247, y: -0.000000046532094, z: 0.33618656, w: 0.94179547}
+      scale: {x: 1, y: 1.0000001, z: 1}
+    - name: Ear_R
+      parentName: Head
+      position: {x: 0.18842106, y: 0.40210527, z: -0.010526316}
+      rotation: {x: 0.000000016610251, y: 0.000000046532097, z: -0.33618656, w: 0.94179547}
+      scale: {x: 1, y: 1.0000001, z: 1}
+    - name: LeftShoulder
+      parentName: Chest
+      position: {x: -0.037894737, y: 0.058947414, z: 0.004210526}
+      rotation: {x: 0.0000000022512459, y: -0.0000000024796327, z: 0.6721888, w: 0.74037975}
+      scale: {x: 1, y: 1, z: 1}
+    - name: LeftUpperArm
+      parentName: LeftShoulder
+      position: {x: -4.713966e-10, y: 0.1311361, z: -2.579471e-10}
+      rotation: {x: 0.00096373487, y: 0.017874092, z: 0.070029296, w: 0.9973843}
+      scale: {x: 1, y: 0.99999994, z: 1}
+    - name: LeftLowerArm
+      parentName: LeftUpperArm
+      position: {x: -3.8821446e-10, y: 0.09567701, z: 0.0000000027939677}
+      rotation: {x: -0.0023433948, y: 0.008662426, z: 0.014404296, w: 0.999856}
+      scale: {x: 0.99999994, y: 1, z: 1}
+    - name: LeftHand
+      parentName: LeftLowerArm
+      position: {x: 0.000000053313297, y: 0.06661515, z: -4.656613e-10}
+      rotation: {x: -0.0057876185, y: 0.0057626977, z: 0.09598049, w: 0.9953497}
+      scale: {x: 1, y: 1, z: 0.99999994}
+    - name: RightShoulder
+      parentName: Chest
+      position: {x: 0.037894737, y: 0.058947414, z: 0.004210526}
+      rotation: {x: 0.0000000022512459, y: 0.0000000024796327, z: -0.6721888, w: 0.74037975}
+      scale: {x: 1, y: 1, z: 1}
+    - name: RightUpperArm
+      parentName: RightShoulder
+      position: {x: 4.713966e-10, y: 0.1311361, z: -2.5795188e-10}
+      rotation: {x: 0.0009637813, y: -0.017874105, z: -0.07002941, w: 0.9973843}
+      scale: {x: 1, y: 0.99999994, z: 1}
+    - name: RightLowerArm
+      parentName: RightUpperArm
+      position: {x: 3.8821446e-10, y: 0.09567701, z: 0.0000000027939677}
+      rotation: {x: -0.0023434279, y: -0.008662341, z: -0.014403758, w: 0.999856}
+      scale: {x: 0.99999994, y: 1, z: 1}
+    - name: RightHand
+      parentName: RightLowerArm
+      position: {x: -0.000000053313297, y: 0.06661515, z: -4.656613e-10}
+      rotation: {x: -0.0057876185, y: -0.0057626977, z: -0.09598049, w: 0.9953497}
+      scale: {x: 1, y: 1, z: 0.99999994}
+    - name: Tail
+      parentName: Hips
+      position: {x: -0.000000024092824, y: 0.016842121, z: -0.20210528}
+      rotation: {x: -0.70710665, y: 0.00000004214684, z: 0.000000042146826, w: 0.7071069}
+      scale: {x: 1, y: 1, z: 1}
+    - name: LeftUpperLeg
+      parentName: Hips
+      position: {x: -0.10526316, y: -0.012631565, z: 0.000000012548346}
+      rotation: {x: -0.00000006880619, y: 0.1053508, z: 0.99443513, w: 0.00000005124535}
+      scale: {x: 1, y: 1, z: 0.9999992}
+    - name: LeftLowerLeg
+      parentName: LeftUpperLeg
+      position: {x: 0.000000001902022, y: 0.030142771, z: -2.4121682e-10}
+      rotation: {x: -0.13913223, y: -0.00000017750217, z: -1.6390632e-10, w: 0.99027383}
+      scale: {x: 1, y: 1.0000001, z: 1}
+    - name: LeftFoot
+      parentName: LeftLowerLeg
+      position: {x: -1.7527592e-10, y: 0.09284666, z: 5.765157e-10}
+      rotation: {x: 0.6259984, y: 0.000000092962374, z: 0.000000019898195, w: 0.77982444}
+      scale: {x: 1, y: 1.0000001, z: 1}
+    - name: RightUpperLeg
+      parentName: Hips
+      position: {x: 0.10526316, y: -0.012631565, z: -0.000000012548346}
+      rotation: {x: -0.00000006880619, y: 0.1053508, z: 0.99443513, w: 0.00000005124535}
+      scale: {x: 1, y: 1, z: 0.9999992}
+    - name: RightLowerLeg
+      parentName: RightUpperLeg
+      position: {x: -0.0000000055485585, y: 0.030142765, z: -0.000000004415396}
+      rotation: {x: -0.13913223, y: -0.00000017750217, z: -1.6390632e-10, w: 0.99027383}
+      scale: {x: 1, y: 1.0000001, z: 1}
+    - name: RightFoot
+      parentName: RightLowerLeg
+      position: {x: -1.7527592e-10, y: 0.09284666, z: 8.2046814e-10}
+      rotation: {x: 0.6259984, y: 0.000000092962374, z: 0.000000019898195, w: 0.77982444}
+      scale: {x: 1, y: 1.0000001, z: 1}
+    - name: PandaChibi_Tail
+      parentName: PandaChibi(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 1
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {fileID: 9000000, guid: bf3f310a7cfe4a24bbbeae71ab731aea, type: 3}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 3
+  humanoidOversampling: 1
+  avatarSetup: 2
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
