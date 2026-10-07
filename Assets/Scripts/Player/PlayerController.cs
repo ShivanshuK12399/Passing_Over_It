@@ -78,55 +78,85 @@ namespace PassingOverIt.Player
         private float slipTimer = 0f, currentDiveSpeed = 0f;
         private Vector3 diveDir;
 
+        private bool isInitialized = false;
+
+        /// <summary>
+        /// Returns true if this instance is driven locally (either local network owner or offline single-player test).
+        /// </summary>
+        public bool IsLocalDriver => NetworkObject != null && NetworkObject.IsSpawned ? IsOwner : true;
+
+        // Animation state exposed for PlayerAnimation.cs (read-only)
+        public bool IsJumping => isJumping;
+        public bool IsDiving => isDiving;
+        public bool IsDashing => isDashing;
+
+        private void Start()
+        {
+            // Offline test scene fallback: initialize input & camera if not spawned by Fish-Net
+            if (NetworkObject == null || !NetworkObject.IsSpawned)
+            {
+                InitializeLocalPlayer();
+            }
+        }
+
         public override void OnStartClient()
         {
             base.OnStartClient();
 
-            // Setup input and camera ONLY for the local owning player
+            // Setup input and camera ONLY for the local owning player in network mode
             if (IsOwner)
             {
-                inputActions = new InputSystemActions();
-                inputActions.Player.Enable();
+                InitializeLocalPlayer();
+            }
+        }
 
-                inputActions.Player.Jump.started += OnJump;
-                inputActions.Player.Jump.canceled += OnJump;
-                inputActions.Player.Dash.started += OnDash;
+        private void InitializeLocalPlayer()
+        {
+            if (isInitialized) return;
+            isInitialized = true;
 
-                // Find main camera if not set
-                if (cam == null && Camera.main != null)
-                {
-                    cam = Camera.main.transform;
-                }
+            inputActions = new InputSystemActions();
+            inputActions.Player.Enable();
 
-                // Find Cinemachine camera in scene if not assigned
-                if (freeLookCam == null)
-                {
-                    freeLookCam = FindFirstObjectByType<CinemachineCamera>();
-                }
+            inputActions.Player.Jump.started += OnJump;
+            inputActions.Player.Jump.canceled += OnJump;
+            inputActions.Player.Dash.started += OnDash;
 
-                if (freeLookCam != null)
-                {
-                    orbitalFollow = freeLookCam.GetComponent<CinemachineOrbitalFollow>();
+            // Find main camera if not set
+            if (cam == null && Camera.main != null)
+            {
+                cam = Camera.main.transform;
+            }
 
-                    // Setup local camera target proxy for camera dead zone
-                    GameObject targetObj = new GameObject($"CameraFollowTarget_{OwnerId}");
-                    cameraTargetProxy = targetObj.transform;
-                    cameraTargetProxy.position = transform.position;
+            // Find Cinemachine camera in scene if not assigned
+            if (freeLookCam == null)
+            {
+                freeLookCam = FindFirstObjectByType<CinemachineCamera>();
+            }
 
-                    freeLookCam.Target.TrackingTarget = cameraTargetProxy;
-                }
+            if (freeLookCam != null)
+            {
+                orbitalFollow = freeLookCam.GetComponent<CinemachineOrbitalFollow>();
 
-                GameManager.OnControlModeChanged += HandleControlModeChanged;
-                if (GameManager.Instance != null)
-                {
-                    HandleControlModeChanged(GameManager.Instance.UseTouchControls);
-                }
+                // Setup local camera target proxy for camera dead zone
+                int id = NetworkObject != null && NetworkObject.IsSpawned ? OwnerId : 0;
+                GameObject targetObj = new GameObject($"CameraFollowTarget_{id}");
+                cameraTargetProxy = targetObj.transform;
+                cameraTargetProxy.position = transform.position;
+
+                freeLookCam.Target.TrackingTarget = cameraTargetProxy;
+            }
+
+            GameManager.OnControlModeChanged += HandleControlModeChanged;
+            if (GameManager.Instance != null)
+            {
+                HandleControlModeChanged(GameManager.Instance.UseTouchControls);
             }
         }
 
         private void OnDestroy()
         {
-            if (IsOwner)
+            if (isInitialized)
             {
                 GameManager.OnControlModeChanged -= HandleControlModeChanged;
 
@@ -145,7 +175,7 @@ namespace PassingOverIt.Player
 
         private void HandleControlModeChanged(bool isTouchEnabled)
         {
-            if (!IsOwner) return;
+            if (!IsLocalDriver) return;
 
             if (freeLookCam != null)
             {
@@ -159,7 +189,7 @@ namespace PassingOverIt.Player
 
         private void OnJump(InputAction.CallbackContext context)
         {
-            if (!IsOwner || !context.ReadValueAsButton()) return;
+            if (!IsLocalDriver || !context.ReadValueAsButton()) return;
 
             if (characterController.isGrounded)
             {
@@ -181,11 +211,15 @@ namespace PassingOverIt.Player
 
         private void OnDash(InputAction.CallbackContext context)
         {
-            if (!IsOwner || !canDash || isDashing) return;
+            if (!IsLocalDriver || !canDash || isDashing) return;
 
             Vector3 chosenDir = moveDir.magnitude > 0.1f ? moveDir.normalized : transform.forward;
             StartDashLocal(chosenDir);
-            ServerDashRpc(chosenDir);
+
+            if (NetworkObject != null && NetworkObject.IsSpawned)
+            {
+                ServerDashRpc(chosenDir);
+            }
         }
 
         private void StartDashLocal(Vector3 dir)
@@ -195,7 +229,7 @@ namespace PassingOverIt.Player
             dashTimer = dashDuration;
             dashDir = dir;
 
-            if (IsOwner)
+            if (IsLocalDriver)
             {
                 SetCameraDamping(dashDamping);
             }
@@ -217,7 +251,11 @@ namespace PassingOverIt.Player
         {
             Vector3 chosenDir = moveDir.magnitude > 0.1f ? moveDir.normalized : transform.forward;
             StartDiveLocal(chosenDir);
-            ServerDiveRpc(chosenDir);
+
+            if (NetworkObject != null && NetworkObject.IsSpawned)
+            {
+                ServerDiveRpc(chosenDir);
+            }
         }
 
         private void StartDiveLocal(Vector3 dir)
@@ -263,8 +301,8 @@ namespace PassingOverIt.Player
                 return;
             }
 
-            // Only local owner reads input & calculates autonomous movement
-            if (IsOwner)
+            // Local owner or offline single-player reads input & calculates autonomous movement
+            if (IsLocalDriver)
             {
                 HandleMovement();
                 HandleDashCooldown();
@@ -430,7 +468,7 @@ namespace PassingOverIt.Player
 
         private void LateUpdate()
         {
-            if (IsOwner)
+            if (IsLocalDriver)
             {
                 UpdateCameraDeadZone();
             }
