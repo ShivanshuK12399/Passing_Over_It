@@ -10,9 +10,12 @@ GameObject:
   m_Component:
   - component: {fileID: 948326884448589691}
   - component: {fileID: 1903174716742631372}
+  - component: {fileID: 2599088604033038839}
   - component: {fileID: 904624871022323811}
+  - component: {fileID: 3986563148673007876}
   - component: {fileID: 3244310570955283893}
   - component: {fileID: 7350032204316560949}
+  - component: {fileID: 8457919460116953013}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -62,6 +65,28 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 1, z: 0}
+--- !u!95 &2599088604033038839
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1373003371511616137}
+  m_Enabled: 1
+  m_Avatar: {fileID: 9000000, guid: bf3f310a7cfe4a24bbbeae71ab731aea, type: 3}
+  m_Controller: {fileID: 9100000, guid: da29a807573fcf540adfb16486259f6f, type: 2}
+  m_CullingMode: 1
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!114 &904624871022323811
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -100,6 +125,19 @@ MonoBehaviour:
   showDeadZoneGizmos: 1
   characterController: {fileID: 1903174716742631372}
   cam: {fileID: 0}
+--- !u!114 &3986563148673007876
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1373003371511616137}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f96fee5904b9c440afe0a781e9858c7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PassingOverIt.Player.PlayerAnimation
+  speedSmoothRate: 10
 --- !u!114 &3244310570955283893
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -204,6 +242,28 @@ MonoBehaviour:
     X: 0
     Y: 0
     Z: 0
+--- !u!114 &8457919460116953013
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1373003371511616137}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8cac635f24954048aad3a6ff9110beb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FishNet.Runtime::FishNet.Component.Animating.NetworkAnimator
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 3244310570955283893}
+  _networkObjectCache: {fileID: 0}
+  IgnoredParameters: []
+  _animator: {fileID: 2599088604033038839}
+  _synchronizeWhenDisabled: 0
+  _smoothFloats: 1
+  _interpolation: 2
+  _clientAuthoritative: 1
+  _sendToOwner: 0
 --- !u!1 &7331132739628558459
 GameObject:
   m_ObjectHideFlags: 0
@@ -303,7 +363,8 @@ PrefabInstance:
       propertyPath: m_Name
       value: PandaChibi
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 5866666021909216657, guid: bf3f310a7cfe4a24bbbeae71ab731aea, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []

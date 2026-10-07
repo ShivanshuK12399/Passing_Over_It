@@ -3,16 +3,8 @@ using UnityEngine;
 namespace PassingOverIt.Player
 {
     /// <summary>
-    /// Drives the PandaChibi Animator from PlayerController state.
-    /// Reads movement state each frame and updates Animator parameters only when values change.
-    /// Animator component must be on a child mesh GameObject under the player root.
-    /// 
-    /// Required Animator parameters:
-    ///   Speed     (Float)  — 0 = Idle, 1 = Run
-    ///   IsGrounded (Bool)
-    ///   IsJumping  (Bool)
-    ///   IsDiving   (Bool)
-    ///   IsDashing  (Bool)
+    /// Drives the PandaChibi Animator parameters from PlayerController state.
+    /// Manages zero-GC cached parameter updates and network animation synchronization.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PlayerController))]
@@ -22,7 +14,7 @@ namespace PassingOverIt.Player
         [Tooltip("How fast the Speed animator float ramps up/down. Increase for snappier transitions.")]
         [SerializeField] private float speedSmoothRate = 10f;
 
-        // Cached references
+        // Cached component references
         private PlayerController _controller;
         private CharacterController _characterController;
         private Animator _animator;
@@ -31,6 +23,7 @@ namespace PassingOverIt.Player
         private static readonly int SpeedHash      = Animator.StringToHash("Speed");
         private static readonly int IsGroundedHash = Animator.StringToHash("IsGrounded");
         private static readonly int IsJumpingHash  = Animator.StringToHash("IsJumping");
+        private static readonly int IsFallingHash  = Animator.StringToHash("IsFalling");
         private static readonly int IsDivingHash   = Animator.StringToHash("IsDiving");
         private static readonly int IsDashingHash  = Animator.StringToHash("IsDashing");
 
@@ -38,6 +31,7 @@ namespace PassingOverIt.Player
         private float _lastSpeed = -1f;
         private bool  _lastIsGrounded = false;
         private bool  _lastIsJumping  = false;
+        private bool  _lastIsFalling  = false;
         private bool  _lastIsDiving   = false;
         private bool  _lastIsDashing  = false;
 
@@ -45,36 +39,68 @@ namespace PassingOverIt.Player
 
         private void Awake()
         {
-            _controller        = GetComponent<PlayerController>();
+            _controller          = GetComponent<PlayerController>();
             _characterController = GetComponent<CharacterController>();
-
-            // Animator lives on the child mesh, not the root
-            _animator = GetComponentInChildren<Animator>();
+            _animator            = GetComponent<Animator>();
 
             if (_animator == null)
-                Debug.LogWarning("[PlayerAnimation] No Animator found in children of " + name + ". Animations will not play.");
+            {
+                Debug.LogWarning($"[PlayerAnimation] No Animator component found on {name}. Animations will not play.");
+            }
+            else
+            {
+                // Disable Root Motion so CharacterController.Move() exclusively controls movement physics
+                _animator.applyRootMotion = false;
+            }
 
             if (_characterController == null)
-                Debug.LogWarning("[PlayerAnimation] No CharacterController found on " + name + ".");
+            {
+                Debug.LogWarning($"[PlayerAnimation] No CharacterController component found on {name}.");
+            }
+        }
+
+        /// <summary>
+        /// Explicitly triggers the jump animation state.
+        /// Called locally upon jump launch and via RPC on remote network observers.
+        /// </summary>
+        public void PlayJumpAnimation()
+        {
+            if (_animator == null) return;
+
+            _animator.Play("Jump_Start", 0, 0f);
+            _animator.SetBool(IsFallingHash, false);
+            _animator.SetBool(IsGroundedHash, false);
+
+            _lastIsJumping  = false;
+            _lastIsFalling  = false;
+            _lastIsGrounded = false;
         }
 
         private void Update()
         {
             if (_animator == null || _controller == null || _characterController == null) return;
 
+            // In network mode, local owner drives full input animation parameters.
+            // Remote clients receive explicit action RPCs (Jump/Dash/Dive) and update physics states (Grounded/Falling).
+            if (_controller.NetworkObject != null && _controller.NetworkObject.IsSpawned && !_controller.IsOwner)
+            {
+                UpdateGrounded();
+                UpdateFalling();
+                return;
+            }
+
             UpdateSpeed();
             UpdateGrounded();
             UpdateJumping();
+            UpdateFalling();
             UpdateDiving();
             UpdateDashing();
         }
 
         private void UpdateSpeed()
         {
-            // Use horizontal velocity only (exclude vertical for jump/fall)
-            Vector3 horizontalVelocity = _characterController.velocity;
-            horizontalVelocity.y = 0f;
-            float targetSpeed = horizontalVelocity.magnitude / _controller.moveSpeed; // normalized 0-1
+            // Use movement input magnitude so landing physics drift doesn't corrupt Animator Speed
+            float targetSpeed = Mathf.Clamp01(_controller.MoveInputMagnitude);
 
             // Smooth the speed value so blend tree transitions aren't jittery
             _smoothedSpeed = Mathf.MoveTowards(_smoothedSpeed, targetSpeed, speedSmoothRate * Time.deltaTime);
@@ -89,7 +115,7 @@ namespace PassingOverIt.Player
 
         private void UpdateGrounded()
         {
-            bool grounded = _characterController.isGrounded;
+            bool grounded = _controller.IsGrounded;
             if (grounded == _lastIsGrounded) return;
 
             _animator.SetBool(IsGroundedHash, grounded);
@@ -103,6 +129,15 @@ namespace PassingOverIt.Player
 
             _animator.SetBool(IsJumpingHash, jumping);
             _lastIsJumping = jumping;
+        }
+
+        private void UpdateFalling()
+        {
+            bool falling = _controller.IsFalling;
+            if (falling == _lastIsFalling) return;
+
+            _animator.SetBool(IsFallingHash, falling);
+            _lastIsFalling = falling;
         }
 
         private void UpdateDiving()

@@ -1,50 +1,50 @@
-using System.Collections;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using FishNet.Object;
-using FishNet.Object.Synchronizing;
 
 namespace PassingOverIt.Player
 {
     /// <summary>
     /// Synchronized multiplayer player controller using Fish-Net.
-    /// Handles local player input, movement, dash, dive, and local Cinemachine camera setup.
-    /// Remote players receive position/rotation updates automatically via NetworkTransform.
+    /// Handles local player input, locomotion, jump, dash, dive, and Cinemachine camera setup.
+    /// Remote players receive position/rotation via NetworkTransform and actions via RPCs.
     /// </summary>
     [DisallowMultipleComponent]
     public class PlayerController : NetworkBehaviour
     {
-        [Header("Movement Variables")]
+        [Header("Movement Settings")]
         public float moveSpeed = 5f;
         public float turningTime = 0.1f;
         public float jumpHeight = 20f;
         public float jumpGravity = -80f;
         public float fallGravity = -100f;
 
-        [Header("Dash Variables")]
+        [Header("Dash Settings")]
         public float dashSpeed = 20f;
         public float dashDuration = 0.3f;
         public float dashCooldown = 1.5f;
 
-        [Header("Dive Variables")]
-        public float diveHeight = 8f;       // how high the dive arc goes
-        public float diveDistance = 12f;    // forward velocity
-        public float slipDistance = 0.35f;  // sliding distance after landing
+        [Header("Dive Settings")]
+        public float diveHeight = 8f;
+        public float diveDistance = 12f;
+        public float slipDistance = 0.35f;
         public float diveGravity = -20f;
 
-        [Header("Controller Settings")]
+        [Header("Controller & Physics Settings")]
         public float normalControllerHeight = 2f;
         public float diveControllerHeight = 1f;
+        [SerializeField] private float groundedGravity = -10f;
+        [SerializeField] private LayerMask groundLayerMask = ~0;
 
         [Header("Camera Settings")]
         public CinemachineCamera freeLookCam;
-        public float normalDamping = 1f;     // default smooth follow
-        public float dashDamping = 0f;       // no delay (snaps instantly)
+        public float normalDamping = 1f;
+        public float dashDamping = 0f;
 
         [Header("Camera Dead Zone Settings")]
         public bool useDeadZone = true;
-        [Tooltip("Half-dimensions of dead zone (X: Horizontal, Y: Vertical, Z: Depth). Camera will not follow player while inside this area.")]
+        [Tooltip("Half-dimensions of dead zone (X: Horizontal, Y: Vertical, Z: Depth).")]
         public Vector3 deadZoneSize = new Vector3(2f, 1.5f, 2f);
         [Tooltip("If true, snaps camera target immediately to player when dashing.")]
         public bool snapDeadZoneOnDash = true;
@@ -54,45 +54,89 @@ namespace PassingOverIt.Player
         [Header("References")]
         public CharacterController characterController;
         public Transform cam;
-        
-        private InputSystemActions inputActions;
-        private CinemachineOrbitalFollow orbitalFollow;
-        private Transform cameraTargetProxy;
 
-        // movement variables
-        private float turnVelocity;
-        private Vector3 move, moveDir;
+        // Input & Camera references
+        private InputSystemActions _inputActions;
+        private CinemachineOrbitalFollow _orbitalFollow;
+        private Transform _cameraTargetProxy;
+        private PlayerAnimation _playerAnimation;
 
-        // jump & gravity variables
-        private float groundedGravity = -1f;
-        private bool isJumpPressed, isJumping;
-        private Vector3 verticalVelocity;
+        // Locomotion state
+        private float _turnVelocity;
+        private Vector3 _move, _moveDir;
 
-        // dash variables
-        private bool isDashing = false, canDash = true;
-        private float dashTimer = 0f, dashCooldownTimer = 0f;
-        private Vector3 dashDir;
+        // Jump & Vertical Movement state
+        private bool _isJumpPressed, _isJumping;
+        private Vector3 _verticalVelocity;
+        private float _airTime = 0f;
+        private const float DiveAirTimeThreshold = 0.2f;
 
-        // dive variables
-        private bool isDiving = false, canDive = true, isRecoveringRotation = false;
-        private float slipTimer = 0f, currentDiveSpeed = 0f;
-        private Vector3 diveDir;
+        // Dash state
+        private bool _isDashing = false, _canDash = true;
+        private float _dashTimer = 0f, _dashCooldownTimer = 0f;
+        private Vector3 _dashDir;
 
-        private bool isInitialized = false;
+        // Dive state
+        private bool _isDiving = false, _canDive = true, _isRecoveringRotation = false;
+        private float _slipTimer = 0f, _currentDiveSpeed = 0f;
+        private Vector3 _diveDir;
+
+        private bool _isInitialized = false;
+
+        #region Public API Properties
 
         /// <summary>
-        /// Returns true if this instance is driven locally (either local network owner or offline single-player test).
+        /// Returns true if this instance is driven locally (local network owner or offline single-player).
         /// </summary>
-        public bool IsLocalDriver => NetworkObject != null && NetworkObject.IsSpawned ? IsOwner : true;
+        public bool IsLocalDriver => NetworkObject == null || !NetworkObject.IsSpawned || IsOwner;
 
-        // Animation state exposed for PlayerAnimation.cs (read-only)
-        public bool IsJumping => isJumping;
-        public bool IsDiving => isDiving;
-        public bool IsDashing => isDashing;
+        /// <summary>
+        /// Returns true if character is standing on ground (combines CharacterController.isGrounded with Raycast fallback).
+        /// </summary>
+        public bool IsGrounded => CheckIsGrounded();
+
+        /// <summary>
+        /// Magnitude of the local movement input vector (0.0 to 1.0).
+        /// </summary>
+        public float MoveInputMagnitude => _move.magnitude;
+
+        /// <summary>
+        /// Returns true if player is currently in rising jump state.
+        /// </summary>
+        public bool IsJumping => _isJumping;
+
+        /// <summary>
+        /// Returns true if player is falling airborne.
+        /// </summary>
+        public bool IsFalling => !CheckIsGrounded() && _verticalVelocity.y < 0f && !_isDiving;
+
+        /// <summary>
+        /// Returns true if player is performing a dive.
+        /// </summary>
+        public bool IsDiving => _isDiving;
+
+        /// <summary>
+        /// Returns true if player is performing a dash.
+        /// </summary>
+        public bool IsDashing => _isDashing;
+
+        #endregion
+
+        #region Component Lifecycle
+
+        private void Awake()
+        {
+            _playerAnimation = GetComponent<PlayerAnimation>();
+
+            if (characterController == null)
+            {
+                characterController = GetComponent<CharacterController>();
+            }
+        }
 
         private void Start()
         {
-            // Offline test scene fallback: initialize input & camera if not spawned by Fish-Net
+            // Fallback for offline test scenes
             if (NetworkObject == null || !NetworkObject.IsSpawned)
             {
                 InitializeLocalPlayer();
@@ -103,7 +147,6 @@ namespace PassingOverIt.Player
         {
             base.OnStartClient();
 
-            // Setup input and camera ONLY for the local owning player in network mode
             if (IsOwner)
             {
                 InitializeLocalPlayer();
@@ -112,23 +155,21 @@ namespace PassingOverIt.Player
 
         private void InitializeLocalPlayer()
         {
-            if (isInitialized) return;
-            isInitialized = true;
+            if (_isInitialized) return;
+            _isInitialized = true;
 
-            inputActions = new InputSystemActions();
-            inputActions.Player.Enable();
+            _inputActions = new InputSystemActions();
+            _inputActions.Player.Enable();
 
-            inputActions.Player.Jump.started += OnJump;
-            inputActions.Player.Jump.canceled += OnJump;
-            inputActions.Player.Dash.started += OnDash;
+            _inputActions.Player.Jump.started += OnJumpInput;
+            _inputActions.Player.Jump.canceled += OnJumpInput;
+            _inputActions.Player.Dash.started += OnDashInput;
 
-            // Find main camera if not set
             if (cam == null && Camera.main != null)
             {
                 cam = Camera.main.transform;
             }
 
-            // Find Cinemachine camera in scene if not assigned
             if (freeLookCam == null)
             {
                 freeLookCam = FindFirstObjectByType<CinemachineCamera>();
@@ -136,15 +177,14 @@ namespace PassingOverIt.Player
 
             if (freeLookCam != null)
             {
-                orbitalFollow = freeLookCam.GetComponent<CinemachineOrbitalFollow>();
+                _orbitalFollow = freeLookCam.GetComponent<CinemachineOrbitalFollow>();
 
-                // Setup local camera target proxy for camera dead zone
                 int id = NetworkObject != null && NetworkObject.IsSpawned ? OwnerId : 0;
                 GameObject targetObj = new GameObject($"CameraFollowTarget_{id}");
-                cameraTargetProxy = targetObj.transform;
-                cameraTargetProxy.position = transform.position;
+                _cameraTargetProxy = targetObj.transform;
+                _cameraTargetProxy.position = transform.position;
 
-                freeLookCam.Target.TrackingTarget = cameraTargetProxy;
+                freeLookCam.Target.TrackingTarget = _cameraTargetProxy;
             }
 
             GameManager.OnControlModeChanged += HandleControlModeChanged;
@@ -156,64 +196,114 @@ namespace PassingOverIt.Player
 
         private void OnDestroy()
         {
-            if (isInitialized)
+            if (!_isInitialized) return;
+
+            GameManager.OnControlModeChanged -= HandleControlModeChanged;
+
+            if (_inputActions != null)
             {
-                GameManager.OnControlModeChanged -= HandleControlModeChanged;
+                _inputActions.Player.Disable();
+                _inputActions.Dispose();
+            }
 
-                if (inputActions != null)
-                {
-                    inputActions.Player.Disable();
-                    inputActions.Dispose();
-                }
-
-                if (cameraTargetProxy != null)
-                {
-                    Destroy(cameraTargetProxy.gameObject);
-                }
+            if (_cameraTargetProxy != null)
+            {
+                Destroy(_cameraTargetProxy.gameObject);
             }
         }
+
+        #endregion
+
+        #region Physics & Ground Detection
+
+        private bool CheckIsGrounded()
+        {
+            if (characterController != null && characterController.isGrounded)
+                return true;
+
+            Vector3 origin = transform.position + Vector3.up * 0.15f;
+            if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 0.35f, groundLayerMask, QueryTriggerInteraction.Ignore))
+            {
+                Transform hitTransform = hit.collider.transform;
+                if (hitTransform != transform && !hitTransform.IsChildOf(transform))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        #endregion
+
+        #region Update Loops
+
+        private void Update()
+        {
+            _airTime = CheckIsGrounded() ? 0f : _airTime + Time.deltaTime;
+
+            if (_isDiving)
+            {
+                HandleDive();
+                return;
+            }
+
+            if (_isDashing)
+            {
+                DashMovement();
+                return;
+            }
+
+            if (IsLocalDriver)
+            {
+                HandleMovement();
+                HandleDashCooldown();
+            }
+
+            if (_isRecoveringRotation)
+            {
+                RecoverRotation();
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (IsLocalDriver)
+            {
+                UpdateCameraDeadZone();
+            }
+        }
+
+        #endregion
+
+        #region Locomotion & Input Handling
 
         private void HandleControlModeChanged(bool isTouchEnabled)
         {
-            if (!IsLocalDriver) return;
+            if (!IsLocalDriver || freeLookCam == null) return;
 
-            if (freeLookCam != null)
+            CinemachineInputAxisController axisController = freeLookCam.GetComponent<CinemachineInputAxisController>();
+            if (axisController != null)
             {
-                CinemachineInputAxisController axisController = freeLookCam.GetComponent<CinemachineInputAxisController>();
-                if (axisController != null)
-                {
-                    axisController.enabled = !isTouchEnabled;
-                }
+                axisController.enabled = !isTouchEnabled;
             }
         }
 
-        private void OnJump(InputAction.CallbackContext context)
+        private void OnJumpInput(InputAction.CallbackContext context)
         {
             if (!IsLocalDriver || !context.ReadValueAsButton()) return;
 
-            if (characterController.isGrounded)
+            if (!_isDiving && !_isDashing)
             {
-                if (!isJumping && !isDiving)
-                {
-                    verticalVelocity.y = jumpHeight;
-                    isJumping = true;
-                    canDash = false;
-                }
-            }
-            else
-            {
-                if (!isDiving && canDive)
-                {
-                    StartDive();
-                }
+                _isJumpPressed = true;
             }
         }
 
-        private void OnDash(InputAction.CallbackContext context)
+        private void OnDashInput(InputAction.CallbackContext context)
         {
-            if (!IsLocalDriver || !canDash || isDashing) return;
+            if (!IsLocalDriver || !_canDash || _isDashing) return;
 
-            Vector3 chosenDir = moveDir.magnitude > 0.1f ? moveDir.normalized : transform.forward;
+            Vector3 chosenDir = _moveDir.magnitude > 0.1f ? _moveDir.normalized : transform.forward;
             StartDashLocal(chosenDir);
 
             if (NetworkObject != null && NetworkObject.IsSpawned)
@@ -222,12 +312,127 @@ namespace PassingOverIt.Player
             }
         }
 
+        private void HandleMovement()
+        {
+            if (_inputActions == null) return;
+
+            Vector2 input = _inputActions.Player.Move.ReadValue<Vector2>();
+            _move = new Vector3(input.x, 0, input.y);
+
+            float camY = cam != null ? cam.eulerAngles.y : 0f;
+            float targetAngle = Mathf.Atan2(_move.x, _move.z) * Mathf.Rad2Deg + camY;
+
+            if (_move.magnitude >= 0.1f)
+            {
+                if (!_isRecoveringRotation)
+                {
+                    float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref _turnVelocity, turningTime);
+                    transform.rotation = Quaternion.Euler(0, angle, 0);
+                }
+                else
+                {
+                    RecoverRotation();
+                }
+
+                _moveDir = Quaternion.Euler(0, targetAngle, 0) * Vector3.forward;
+            }
+            else
+            {
+                _moveDir = Quaternion.Euler(0, targetAngle, 0) * Vector3.zero;
+            }
+
+            if (characterController != null)
+            {
+                characterController.Move((_moveDir * moveSpeed + HandleVerticalMovement()) * Time.deltaTime);
+            }
+        }
+
+        private Vector3 HandleVerticalMovement()
+        {
+            bool grounded = CheckIsGrounded();
+
+            if (grounded)
+            {
+                if (_verticalVelocity.y < 0f)
+                    _verticalVelocity.y = groundedGravity;
+
+                _isJumping = false;
+                _canDive = true;
+
+                if (_isJumpPressed && !_isDiving)
+                {
+                    StartJump();
+                }
+
+                _isJumpPressed = false;
+            }
+            else
+            {
+                float gravityToUse = _verticalVelocity.y > 0f ? jumpGravity : fallGravity;
+                _verticalVelocity.y += gravityToUse * Time.deltaTime;
+
+                if (_isJumping && _verticalVelocity.y < jumpHeight)
+                {
+                    _isJumping = false;
+                }
+
+                // Double pressing Jump (mid-air jump press) triggers Dive instantly
+                if (_isJumpPressed && !_isDiving && _canDive)
+                {
+                    _isJumpPressed = false;
+                    StartDive();
+                }
+
+                _isJumpPressed = false;
+            }
+
+            return _verticalVelocity;
+        }
+
+        #endregion
+
+        #region Actions & RPC Synchronization
+
+        private void StartJump()
+        {
+            _verticalVelocity.y = jumpHeight;
+            _isJumping = true;
+            _canDash = false;
+
+            TriggerJumpAnimationLocal();
+
+            if (NetworkObject != null && NetworkObject.IsSpawned)
+            {
+                ServerJumpRpc();
+            }
+        }
+
+        private void TriggerJumpAnimationLocal()
+        {
+            if (_playerAnimation != null)
+            {
+                _playerAnimation.PlayJumpAnimation();
+            }
+        }
+
+        [ServerRpc]
+        private void ServerJumpRpc()
+        {
+            ObserversJumpRpc();
+        }
+
+        [ObserversRpc(ExcludeOwner = true)]
+        private void ObserversJumpRpc()
+        {
+            TriggerJumpAnimationLocal();
+        }
+
         private void StartDashLocal(Vector3 dir)
         {
-            isDashing = true;
-            canDash = false;
-            dashTimer = dashDuration;
-            dashDir = dir;
+            _isDashing = true;
+            _canDash = false;
+            _dashTimer = dashDuration;
+            _dashDir = dir;
 
             if (IsLocalDriver)
             {
@@ -249,7 +454,7 @@ namespace PassingOverIt.Player
 
         private void StartDive()
         {
-            Vector3 chosenDir = moveDir.magnitude > 0.1f ? moveDir.normalized : transform.forward;
+            Vector3 chosenDir = _moveDir.magnitude > 0.1f ? _moveDir.normalized : transform.forward;
             StartDiveLocal(chosenDir);
 
             if (NetworkObject != null && NetworkObject.IsSpawned)
@@ -260,18 +465,18 @@ namespace PassingOverIt.Player
 
         private void StartDiveLocal(Vector3 dir)
         {
-            isDiving = true;
-            canDive = false;
-            isJumpPressed = false;
+            _isDiving = true;
+            _canDive = false;
+            _isJumpPressed = false;
 
             if (characterController != null)
             {
                 characterController.height = diveControllerHeight;
             }
 
-            diveDir = dir;
-            slipTimer = slipDistance;
-            currentDiveSpeed = 0f;
+            _diveDir = dir;
+            _slipTimer = slipDistance;
+            _currentDiveSpeed = 0f;
         }
 
         [ServerRpc]
@@ -286,110 +491,18 @@ namespace PassingOverIt.Player
             StartDiveLocal(dir);
         }
 
-        private void Update()
-        {
-            // Dive logic runs for owner & observers to match visual movement
-            if (isDiving)
-            {
-                HandleDive();
-                return;
-            }
-
-            if (isDashing)
-            {
-                DashMovement();
-                return;
-            }
-
-            // Local owner or offline single-player reads input & calculates autonomous movement
-            if (IsLocalDriver)
-            {
-                HandleMovement();
-                HandleDashCooldown();
-            }
-
-            if (isRecoveringRotation)
-            {
-                RecoverRotation();
-            }
-        }
-
-        private void HandleMovement()
-        {
-            if (inputActions == null) return;
-
-            Vector2 input = inputActions.Player.Move.ReadValue<Vector2>();
-
-            move = new Vector3(input.x, 0, input.y);
-
-            float camY = cam != null ? cam.eulerAngles.y : 0f;
-            float targetAngle = Mathf.Atan2(move.x, move.z) * Mathf.Rad2Deg + camY;
-
-            if (move.magnitude >= 0.1f)
-            {
-                if (!isRecoveringRotation)
-                {
-                    float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnVelocity, turningTime);
-                    transform.rotation = Quaternion.Euler(0, angle, 0);
-                }
-                else
-                {
-                    RecoverRotation();
-                }
-
-                moveDir = Quaternion.Euler(0, targetAngle, 0) * Vector3.forward;
-            }
-            else
-            {
-                moveDir = Quaternion.Euler(0, targetAngle, 0) * Vector3.zero;
-            }
-
-            if (characterController != null)
-            {
-                characterController.Move((moveDir * moveSpeed + HandleVerticalMovement()) * Time.deltaTime);
-            }
-        }
-
-        private Vector3 HandleVerticalMovement()
-        {
-            if (characterController.isGrounded)
-            {
-                if (verticalVelocity.y < 0)
-                    verticalVelocity.y = groundedGravity;
-
-                if (isJumpPressed && !isJumping && !isDiving)
-                {
-                    verticalVelocity.y = jumpHeight;
-                    isJumpPressed = false;
-                    isJumping = true;
-                }
-                else
-                {
-                    isJumpPressed = false;
-                    isJumping = false;
-                }
-            }
-            else
-            {
-                float gravityToUse = verticalVelocity.y > 0 ? jumpGravity : fallGravity;
-                verticalVelocity.y += gravityToUse * Time.deltaTime;
-            }
-
-            return verticalVelocity;
-        }
-
         private void DashMovement()
         {
             if (characterController != null)
             {
-                characterController.Move(dashDir * dashSpeed * Time.deltaTime);
+                characterController.Move(_dashDir * dashSpeed * Time.deltaTime);
             }
 
-            dashTimer -= Time.deltaTime;
-            if (dashTimer <= 0f)
+            _dashTimer -= Time.deltaTime;
+            if (_dashTimer <= 0f)
             {
-                isDashing = false;
-                dashCooldownTimer = dashCooldown;
+                _isDashing = false;
+                _dashCooldownTimer = dashCooldown;
                 if (IsOwner)
                 {
                     SetCameraDamping(normalDamping);
@@ -401,36 +514,36 @@ namespace PassingOverIt.Player
         {
             if (characterController == null) return;
 
-            if (!characterController.isGrounded)
+            if (!CheckIsGrounded())
             {
-                currentDiveSpeed = Mathf.Lerp(currentDiveSpeed, diveDistance, 6f * Time.deltaTime);
-                verticalVelocity.y += diveGravity * Time.deltaTime;
+                _currentDiveSpeed = Mathf.Lerp(_currentDiveSpeed, diveDistance, 6f * Time.deltaTime);
+                _verticalVelocity.y += diveGravity * Time.deltaTime;
 
-                Vector3 moveVec = (diveDir * currentDiveSpeed * Time.deltaTime) + (verticalVelocity * Time.deltaTime);
+                Vector3 moveVec = (_diveDir * _currentDiveSpeed * Time.deltaTime) + (_verticalVelocity * Time.deltaTime);
                 characterController.Move(moveVec);
 
                 transform.rotation = Quaternion.Lerp(transform.rotation,
-                    Quaternion.LookRotation(diveDir + Vector3.down * 0.5f),
+                    Quaternion.LookRotation(_diveDir + Vector3.down * 0.5f),
                     8f * Time.deltaTime);
 
                 return;
             }
 
-            if (slipTimer > 0f)
+            if (_slipTimer > 0f)
             {
-                characterController.Move(diveDir * slipDistance * Time.deltaTime);
-                slipTimer -= Time.deltaTime;
+                characterController.Move(_diveDir * slipDistance * Time.deltaTime);
+                _slipTimer -= Time.deltaTime;
                 return;
             }
 
-            if (slipTimer <= 0f)
+            if (_slipTimer <= 0f)
             {
-                isDiving = false;
-                canDive = true;
-                isDashing = false;
-                verticalVelocity = Vector3.zero;
+                _isDiving = false;
+                _canDive = true;
+                _isDashing = false;
+                _verticalVelocity = Vector3.zero;
                 characterController.height = normalControllerHeight;
-                isRecoveringRotation = true;
+                _isRecoveringRotation = true;
             }
         }
 
@@ -440,52 +553,48 @@ namespace PassingOverIt.Player
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, 20f * Time.deltaTime);
 
             if (Quaternion.Angle(transform.rotation, targetRot) < 0.5f)
-                isRecoveringRotation = false;
+                _isRecoveringRotation = false;
         }
 
         private void HandleDashCooldown()
         {
-            if (canDash) return;
+            if (_canDash) return;
 
-            if (dashCooldownTimer > 0)
+            if (_dashCooldownTimer > 0)
             {
-                dashCooldownTimer -= Time.deltaTime;
+                _dashCooldownTimer -= Time.deltaTime;
             }
 
-            if (dashCooldownTimer <= 0f && characterController != null && characterController.isGrounded)
+            if (_dashCooldownTimer <= 0f && CheckIsGrounded())
             {
-                canDash = true;
+                _canDash = true;
             }
         }
+
+        #endregion
+
+        #region Camera & Gizmos
 
         private void SetCameraDamping(float value)
         {
-            if (orbitalFollow != null)
+            if (_orbitalFollow != null)
             {
-                orbitalFollow.TrackerSettings.PositionDamping = new Vector3(value, value, value);
-            }
-        }
-
-        private void LateUpdate()
-        {
-            if (IsLocalDriver)
-            {
-                UpdateCameraDeadZone();
+                _orbitalFollow.TrackerSettings.PositionDamping = new Vector3(value, value, value);
             }
         }
 
         private void UpdateCameraDeadZone()
         {
-            if (cameraTargetProxy == null) return;
+            if (_cameraTargetProxy == null) return;
 
-            if (!useDeadZone || (isDashing && snapDeadZoneOnDash))
+            if (!useDeadZone || (_isDashing && snapDeadZoneOnDash))
             {
-                cameraTargetProxy.position = transform.position;
+                _cameraTargetProxy.position = transform.position;
                 return;
             }
 
             Vector3 playerPos = transform.position;
-            Vector3 targetPos = cameraTargetProxy.position;
+            Vector3 targetPos = _cameraTargetProxy.position;
 
             float deltaX = playerPos.x - targetPos.x;
             if (Mathf.Abs(deltaX) > deadZoneSize.x)
@@ -505,16 +614,18 @@ namespace PassingOverIt.Player
                 targetPos.z = playerPos.z - Mathf.Sign(deltaZ) * deadZoneSize.z;
             }
 
-            cameraTargetProxy.position = targetPos;
+            _cameraTargetProxy.position = targetPos;
         }
 
         private void OnDrawGizmosSelected()
         {
             if (!showDeadZoneGizmos || !useDeadZone) return;
 
-            Vector3 center = Application.isPlaying && cameraTargetProxy != null ? cameraTargetProxy.position : transform.position;
+            Vector3 center = Application.isPlaying && _cameraTargetProxy != null ? _cameraTargetProxy.position : transform.position;
             Gizmos.color = new Color(1f, 0.8f, 0.2f, 0.9f);
             Gizmos.DrawWireCube(center, deadZoneSize * 2f);
         }
+
+        #endregion
     }
 }
