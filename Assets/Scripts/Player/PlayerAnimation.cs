@@ -4,22 +4,19 @@ namespace PassingOverIt.Player
 {
     /// <summary>
     /// Drives the PandaChibi Animator parameters from PlayerController state.
-    /// Manages zero-GC cached parameter updates and network animation synchronization.
+    /// The owner uses input/physics state directly; remote copies estimate speed and
+    /// vertical motion from their synced position, since they have no input or simulation.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PlayerController))]
     public class PlayerAnimation : MonoBehaviour
     {
-        [Header("Speed Smoothing")]
-        [Tooltip("How fast the Speed animator float ramps up/down. Increase for snappier transitions.")]
+        [Tooltip("How fast the Speed parameter ramps up/down. Increase for snappier transitions.")]
         [SerializeField] private float speedSmoothRate = 10f;
 
-        // Cached component references
-        private PlayerController _controller;
-        private CharacterController _characterController;
-        private Animator _animator;
+        private const float RemoteFallThreshold = 0.1f;
+        private const string JumpStartState = "Jump_Start";
 
-        // Cached Animator parameter hashes (zero-GC per guide §6)
         private static readonly int SpeedHash      = Animator.StringToHash("Speed");
         private static readonly int IsGroundedHash = Animator.StringToHash("IsGrounded");
         private static readonly int IsJumpingHash  = Animator.StringToHash("IsJumping");
@@ -27,135 +24,104 @@ namespace PassingOverIt.Player
         private static readonly int IsDivingHash   = Animator.StringToHash("IsDiving");
         private static readonly int IsDashingHash  = Animator.StringToHash("IsDashing");
 
-        // Last-written values to avoid redundant Animator writes (per guide §6)
+        private PlayerController _controller;
+        private Animator _animator;
+
+        // Last values written, to skip redundant Animator writes.
         private float _lastSpeed = -1f;
-        private bool  _lastIsGrounded = false;
-        private bool  _lastIsJumping  = false;
-        private bool  _lastIsFalling  = false;
-        private bool  _lastIsDiving   = false;
-        private bool  _lastIsDashing  = false;
+        private bool _lastGrounded, _lastJumping, _lastFalling, _lastDiving, _lastDashing;
 
         private float _smoothedSpeed;
 
+        // Position-derived velocity for remote players.
+        private Vector3 _lastPosition;
+        private Vector3 _estimatedVelocity;
+
         private void Awake()
         {
-            _controller          = GetComponent<PlayerController>();
-            _characterController = GetComponent<CharacterController>();
-            _animator            = GetComponent<Animator>();
+            _controller = GetComponent<PlayerController>();
+            _animator = GetComponent<Animator>();
 
             if (_animator == null)
             {
-                Debug.LogWarning($"[PlayerAnimation] No Animator component found on {name}. Animations will not play.");
-            }
-            else
-            {
-                // Disable Root Motion so CharacterController.Move() exclusively controls movement physics
-                _animator.applyRootMotion = false;
+                Debug.LogWarning($"[PlayerAnimation] No Animator found on {name}. Animations will not play.", this);
+                return;
             }
 
-            if (_characterController == null)
-            {
-                Debug.LogWarning($"[PlayerAnimation] No CharacterController component found on {name}.");
-            }
+            // CharacterController.Move() must be the only thing moving the player.
+            _animator.applyRootMotion = false;
         }
 
-        /// <summary>
-        /// Explicitly triggers the jump animation state.
-        /// Called locally upon jump launch and via RPC on remote network observers.
-        /// </summary>
+        private void OnEnable() => _lastPosition = transform.position;
+
+        /// <summary>Starts the jump animation. Called locally on jump and via RPC on observers.</summary>
         public void PlayJumpAnimation()
         {
             if (_animator == null) return;
 
-            _animator.Play("Jump_Start", 0, 0f);
-            _animator.SetBool(IsFallingHash, false);
-            _animator.SetBool(IsGroundedHash, false);
-
-            _lastIsJumping  = false;
-            _lastIsFalling  = false;
-            _lastIsGrounded = false;
+            _animator.Play(JumpStartState, 0, 0f);
+            SetBool(IsFallingHash, false, ref _lastFalling);
+            SetBool(IsGroundedHash, false, ref _lastGrounded);
         }
 
         private void Update()
         {
-            if (_animator == null || _controller == null || _characterController == null) return;
+            if (_animator == null) return;
 
-            // In network mode, local owner drives full input animation parameters.
-            // Remote clients receive explicit action RPCs (Jump/Dash/Dive) and update physics states (Grounded/Falling).
-            if (_controller.NetworkObject != null && _controller.NetworkObject.IsSpawned && !_controller.IsOwner)
-            {
-                UpdateGrounded();
-                UpdateFalling();
-                return;
-            }
+            bool isDriver = _controller.IsLocalDriver;
+            if (!isDriver)
+                EstimateVelocity();
 
-            UpdateSpeed();
-            UpdateGrounded();
-            UpdateJumping();
-            UpdateFalling();
-            UpdateDiving();
-            UpdateDashing();
+            UpdateSpeed(isDriver);
+
+            SetBool(IsGroundedHash, _controller.IsGrounded, ref _lastGrounded);
+            SetBool(IsJumpingHash,  _controller.IsJumping,  ref _lastJumping);
+            SetBool(IsFallingHash,  IsFalling(isDriver),    ref _lastFalling);
+            SetBool(IsDivingHash,   _controller.IsDiving,   ref _lastDiving);
+            SetBool(IsDashingHash,  _controller.IsDashing,  ref _lastDashing);
         }
 
-        private void UpdateSpeed()
+        private void EstimateVelocity()
         {
-            // Use movement input magnitude so landing physics drift doesn't corrupt Animator Speed
-            float targetSpeed = Mathf.Clamp01(_controller.MoveInputMagnitude);
+            float dt = Time.deltaTime;
+            if (dt <= 0f) return;
 
-            // Smooth the speed value so blend tree transitions aren't jittery
-            _smoothedSpeed = Mathf.MoveTowards(_smoothedSpeed, targetSpeed, speedSmoothRate * Time.deltaTime);
-
-            // Only write to Animator when the value actually changes (per guide §6)
-            if (!Mathf.Approximately(_smoothedSpeed, _lastSpeed))
-            {
-                _animator.SetFloat(SpeedHash, _smoothedSpeed);
-                _lastSpeed = _smoothedSpeed;
-            }
+            _estimatedVelocity = (transform.position - _lastPosition) / dt;
+            _lastPosition = transform.position;
         }
 
-        private void UpdateGrounded()
+        private void UpdateSpeed(bool isDriver)
         {
-            bool grounded = _controller.IsGrounded;
-            if (grounded == _lastIsGrounded) return;
+            // Input magnitude for the owner (landing drift won't pollute Speed);
+            // synced horizontal movement for remote players.
+            float target = isDriver
+                ? _controller.MoveInputMagnitude
+                : new Vector2(_estimatedVelocity.x, _estimatedVelocity.z).magnitude / _controller.MoveSpeed;
 
-            _animator.SetBool(IsGroundedHash, grounded);
-            _lastIsGrounded = grounded;
+            _smoothedSpeed = Mathf.MoveTowards(_smoothedSpeed, Mathf.Clamp01(target), speedSmoothRate * Time.deltaTime);
+
+            if (Mathf.Approximately(_smoothedSpeed, _lastSpeed)) return;
+
+            _animator.SetFloat(SpeedHash, _smoothedSpeed);
+            _lastSpeed = _smoothedSpeed;
         }
 
-        private void UpdateJumping()
+        private bool IsFalling(bool isDriver)
         {
-            bool jumping = _controller.IsJumping;
-            if (jumping == _lastIsJumping) return;
+            if (isDriver)
+                return _controller.IsFalling;
 
-            _animator.SetBool(IsJumpingHash, jumping);
-            _lastIsJumping = jumping;
+            return !_controller.IsGrounded
+                && !_controller.IsDiving
+                && _estimatedVelocity.y < -RemoteFallThreshold;
         }
 
-        private void UpdateFalling()
+        private void SetBool(int hash, bool value, ref bool lastValue)
         {
-            bool falling = _controller.IsFalling;
-            if (falling == _lastIsFalling) return;
+            if (value == lastValue) return;
 
-            _animator.SetBool(IsFallingHash, falling);
-            _lastIsFalling = falling;
-        }
-
-        private void UpdateDiving()
-        {
-            bool diving = _controller.IsDiving;
-            if (diving == _lastIsDiving) return;
-
-            _animator.SetBool(IsDivingHash, diving);
-            _lastIsDiving = diving;
-        }
-
-        private void UpdateDashing()
-        {
-            bool dashing = _controller.IsDashing;
-            if (dashing == _lastIsDashing) return;
-
-            _animator.SetBool(IsDashingHash, dashing);
-            _lastIsDashing = dashing;
+            _animator.SetBool(hash, value);
+            lastValue = value;
         }
     }
 }

@@ -1070,6 +1070,14 @@ Avoid creating giant "God classes."
 
 ---
 
+## C. Code Cleanliness & Maintenance
+
+* Remove dead code (unused variables, unused methods, redundant checks).
+* Remove duplicated logic and unnecessary comments.
+* Replace magic numbers with named constants.
+
+---
+
 # 27. 🏷️ Naming Conventions
 
 ### Public / Serialized Fields
@@ -1176,6 +1184,9 @@ When modifying this codebase, AI assistants must:
 18. Before making a major optimization, consider its actual execution frequency and measurable impact.
 19. When modifying pooled objects, ensure their complete state is reset.
 20. When modifying networked gameplay, consider bandwidth, authority, prediction/interpolation, and synchronization frequency.
+21. Remove dead code (unused variables, unused methods, redundant checks).
+22. Remove duplicated logic and unnecessary comments.
+23. Replace magic numbers with named constants.
 
 ---
 
@@ -1211,6 +1222,9 @@ When modifying this codebase, AI assistants must:
 28. **Completely reset pooled objects.**
 29. **Keep gameplay state decoupled from presentation.**
 30. **Prefer simple, measurable optimizations over cargo-cult optimization.**
+31. **Remove dead code (unused variables, unused methods, redundant checks).**
+32. **Remove duplicated logic and unnecessary comments.**
+33. **Replace magic numbers with named constants.**
 
 ---
 
