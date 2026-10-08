@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 2599088604033038839}
   - component: {fileID: 904624871022323811}
   - component: {fileID: 3986563148673007876}
+  - component: {fileID: 8671176689777602694}
   - component: {fileID: 3244310570955283893}
   - component: {fileID: 7350032204316560949}
   - component: {fileID: 8457919460116953013}
@@ -107,15 +108,18 @@ MonoBehaviour:
   jumpHeight: 20
   jumpGravity: -50
   fallGravity: -80
+  groundedGravity: -10
   dashSpeed: 30
   dashDuration: 0.3
   dashCooldown: 0.3
-  diveHeight: 12
   diveDistance: 15
-  slipDistance: 0
   diveGravity: -60
+  slipDistance: 0
   normalControllerHeight: 2
   diveControllerHeight: 1
+  groundLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
   freeLookCam: {fileID: 0}
   normalDamping: 1
   dashDamping: 0.2
@@ -138,6 +142,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PassingOverIt.Player.PlayerAnimation
   speedSmoothRate: 10
+--- !u!114 &8671176689777602694
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1373003371511616137}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 50dcaa2db9bb62349bc2c907ed75bdc0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PassingOverIt.Bomb.HandBombHolder
+  handSocket: {fileID: 0}
+  localOffset: {x: 0, y: 0, z: 0.5}
 --- !u!114 &3244310570955283893
 MonoBehaviour:
   m_ObjectHideFlags: 0

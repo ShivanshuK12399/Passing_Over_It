@@ -21,14 +21,22 @@ public class UIController : MonoBehaviour
     [SerializeField] private TMP_Text sensitivityYValueText;
     [SerializeField] private TouchCameraField touchCameraField;
 
+    [Header("Bomb HUD & Pass Button")]
+    [SerializeField] private TMP_Text bombTimerText;
+    [SerializeField] private Button passBombButton;
+    [SerializeField] private GameObject bombHolderIndicator;
+
     private void Start()
     {
         InitializeSensitivitySliders();
+        InitializePassButton();
     }
 
     private void OnEnable()
     {
         GameManager.OnControlModeChanged += HandleControlModeChanged;
+        PassingOverIt.Bomb.BombManager.OnTimerSecondChanged += HandleTimerSecondChanged;
+        PassingOverIt.Bomb.BombManager.OnBombHolderChanged += HandleBombHolderChanged;
 
         // Apply state if GameManager is already running
         if (GameManager.Instance != null)
@@ -40,6 +48,8 @@ public class UIController : MonoBehaviour
     private void OnDisable()
     {
         GameManager.OnControlModeChanged -= HandleControlModeChanged;
+        PassingOverIt.Bomb.BombManager.OnTimerSecondChanged -= HandleTimerSecondChanged;
+        PassingOverIt.Bomb.BombManager.OnBombHolderChanged -= HandleBombHolderChanged;
     }
 
     private void InitializeSensitivitySliders()
@@ -102,6 +112,54 @@ public class UIController : MonoBehaviour
         if (panelToToggle != null)
         {
             panelToToggle.SetActive(isTouchEnabled);
+        }
+    }
+
+    private void InitializePassButton()
+    {
+        if (passBombButton != null)
+        {
+            passBombButton.onClick.AddListener(OnPassButtonClicked);
+        }
+    }
+
+    private void OnPassButtonClicked()
+    {
+        PlayerController[] players = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
+        for (int i = 0; i < players.Length; i++)
+        {
+            if (players[i].IsLocalDriver)
+            {
+                players[i].TryPassBomb();
+                break;
+            }
+        }
+    }
+
+    private void HandleTimerSecondChanged(int remainingSeconds)
+    {
+        if (bombTimerText != null)
+        {
+            bombTimerText.SetText("Bomb: {0}s", remainingSeconds);
+        }
+    }
+
+    private void HandleBombHolderChanged(PlayerController newHolder)
+    {
+        bool localHasBomb = false;
+        if (newHolder != null && newHolder.IsOwner)
+        {
+            localHasBomb = true;
+        }
+
+        if (bombHolderIndicator != null)
+        {
+            bombHolderIndicator.SetActive(localHasBomb);
+        }
+
+        if (passBombButton != null)
+        {
+            passBombButton.interactable = localHasBomb;
         }
     }
 }

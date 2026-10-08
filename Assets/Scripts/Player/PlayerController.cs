@@ -2,6 +2,8 @@ using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using FishNet.Object;
+using FishNet.Object.Synchronizing;
+using PassingOverIt.Bomb;
 
 namespace PassingOverIt.Player
 {
@@ -89,6 +91,13 @@ namespace PassingOverIt.Player
         private float _slipTimer, _currentDiveSpeed;
         private Vector3 _diveDir;
 
+        // Bomb & Stats
+        public readonly SyncVar<int> Kills = new SyncVar<int>();
+        public readonly SyncVar<int> Deaths = new SyncVar<int>();
+        public readonly SyncVar<bool> IsEliminated = new SyncVar<bool>();
+
+        private readonly Collider[] _passOverlapResults = new Collider[16];
+
         #region Public API
 
         /// <summary>True for the owning client, or when running offline.</summary>
@@ -100,11 +109,12 @@ namespace PassingOverIt.Player
         public bool IsDiving => _isDiving;
         public bool IsDashing => _isDashing;
         public float MoveSpeed => moveSpeed;
+        public int Score => Kills.Value - Deaths.Value;
+
+        public bool HasBomb => BombManager.Instance != null && BombManager.Instance.CurrentHolderObjectId.Value == ObjectId;
 
         /// <summary>Local move input magnitude (0-1). Always 0 on remote copies.</summary>
         public float MoveInputMagnitude => _moveInput.magnitude;
-
-        private bool IsNetworked => NetworkObject != null && NetworkObject.IsSpawned;
 
         #endregion
 
@@ -206,6 +216,11 @@ namespace PassingOverIt.Player
             {
                 HandleMovement();
                 HandleDashCooldown();
+
+                if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+                {
+                    TryPassBomb();
+                }
             }
 
             if (_isRecoveringRotation)
@@ -500,6 +515,168 @@ namespace PassingOverIt.Player
 
             Gizmos.color = new Color(1f, 0.8f, 0.2f, 0.9f);
             Gizmos.DrawWireCube(center, deadZoneSize * 2f);
+        }
+
+        #endregion
+
+        #region Bomb & Stats Methods
+
+        /// <summary>
+        /// Called locally via Left Mouse Click or UI Pass Button to attempt passing the bomb.
+        /// Scans for closest valid player in front within range and requests server validation.
+        /// </summary>
+        public void TryPassBomb()
+        {
+            if (!IsLocalDriver || IsEliminated.Value)
+            {
+                Debug.Log($"[PlayerController] TryPassBomb ignored: IsLocalDriver={IsLocalDriver}, IsEliminated={IsEliminated.Value}");
+                return;
+            }
+
+            if (BombManager.Instance == null)
+            {
+                Debug.LogWarning("[PlayerController] TryPassBomb failed: BombManager.Instance is null! Ensure [BombManager] exists in scene.");
+                return;
+            }
+
+            if (!HasBomb)
+            {
+                Debug.Log($"[PlayerController] TryPassBomb ignored: Player {ObjectId} does not hold the bomb (CurrentHolder={BombManager.Instance.CurrentHolderObjectId.Value}).");
+                return;
+            }
+
+            float searchRadius = 5.0f;
+            float maxAngle = 90f * 0.5f; // 45 degree half-angle
+
+            PlayerController bestTarget = null;
+            float closestDist = float.MaxValue;
+
+            // 1. Try non-alloc physics query across all layers
+            int count = Physics.OverlapSphereNonAlloc(transform.position, searchRadius, _passOverlapResults, ~0, QueryTriggerInteraction.Collide);
+
+            for (int i = 0; i < count; i++)
+            {
+                Collider col = _passOverlapResults[i];
+                if (col == null || col.transform.IsChildOf(transform)) continue;
+
+                PlayerController targetPlayer = col.GetComponentInParent<PlayerController>();
+                if (targetPlayer == null || targetPlayer.IsEliminated.Value || targetPlayer == this) continue;
+
+                Vector3 toTarget = targetPlayer.transform.position - transform.position;
+                toTarget.y = 0f; // Horizontal 2D distance
+                float dist = toTarget.magnitude;
+                if (dist > searchRadius) continue;
+
+                Vector3 dir = dist > 0.001f ? toTarget / dist : transform.forward;
+                float angle = Vector3.Angle(transform.forward, dir);
+
+                if (angle <= maxAngle && dist < closestDist)
+                {
+                    closestDist = dist;
+                    bestTarget = targetPlayer;
+                }
+            }
+
+            // 2. Fallback: Search scene player objects directly if physics colliders missed
+            if (bestTarget == null)
+            {
+                PlayerController[] allPlayers = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
+                for (int i = 0; i < allPlayers.Length; i++)
+                {
+                    PlayerController p = allPlayers[i];
+                    if (p == null || p == this || p.IsEliminated.Value) continue;
+
+                    Vector3 toTarget = p.transform.position - transform.position;
+                    toTarget.y = 0f;
+                    float dist = toTarget.magnitude;
+                    if (dist > searchRadius) continue;
+
+                    Vector3 dir = dist > 0.001f ? toTarget / dist : transform.forward;
+                    float angle = Vector3.Angle(transform.forward, dir);
+
+                    if (angle <= maxAngle && dist < closestDist)
+                    {
+                        closestDist = dist;
+                        bestTarget = p;
+                    }
+                }
+            }
+
+            if (bestTarget != null)
+            {
+                Debug.Log($"[PlayerController] Player {ObjectId} passing bomb to target Player {bestTarget.ObjectId} (Distance: {closestDist:F2}m).");
+                BombManager.Instance.ServerRequestPassBombRpc(ObjectId, bestTarget.ObjectId);
+            }
+            else
+            {
+                Debug.Log($"[PlayerController] Player {ObjectId} tried to pass bomb, but no target player was found in front within {searchRadius}m.");
+            }
+        }
+
+        [Server]
+        public void AddKill()
+        {
+            Kills.Value++;
+        }
+
+        [Server]
+        public void AddDeath()
+        {
+            Deaths.Value++;
+        }
+
+        [Server]
+        public void ServerSetEliminated(bool eliminated)
+        {
+            IsEliminated.Value = eliminated;
+            if (characterController != null)
+            {
+                characterController.enabled = !eliminated;
+            }
+            ObserversSetEliminatedRpc(eliminated);
+        }
+
+        [ObserversRpc]
+        private void ObserversSetEliminatedRpc(bool eliminated)
+        {
+            if (characterController != null)
+            {
+                characterController.enabled = !eliminated;
+            }
+            gameObject.SetActive(!eliminated);
+        }
+
+        [Server]
+        public void ServerRespawnAt(Vector3 position)
+        {
+            ServerSetEliminated(false);
+            if (characterController != null)
+            {
+                characterController.enabled = false;
+                transform.position = position;
+                characterController.enabled = true;
+            }
+            else
+            {
+                transform.position = position;
+            }
+            ObserversRespawnAtRpc(position);
+        }
+
+        [ObserversRpc]
+        private void ObserversRespawnAtRpc(Vector3 position)
+        {
+            gameObject.SetActive(true);
+            if (characterController != null)
+            {
+                characterController.enabled = false;
+                transform.position = position;
+                characterController.enabled = true;
+            }
+            else
+            {
+                transform.position = position;
+            }
         }
 
         #endregion
