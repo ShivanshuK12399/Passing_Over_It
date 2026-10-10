@@ -132,8 +132,8 @@ namespace PassingOverIt.Player
 
         #region Public API
 
-        /// <summary>True for the owning client, or when running offline.</summary>
-        public bool IsLocalDriver => !IsNetworked || IsOwner;
+        /// <summary>True for the owning client driving local input and simulation.</summary>
+        public bool IsLocalDriver => IsOwner;
 
         public bool IsGrounded => _isGrounded;
         public bool IsJumping => _isJumping;
@@ -158,13 +158,6 @@ namespace PassingOverIt.Player
 
             if (characterController == null)
                 characterController = GetComponent<CharacterController>();
-        }
-
-        private void Start()
-        {
-            // Offline / test scenes have no network spawn callback.
-            if (!IsNetworked)
-                InitializeLocalPlayer();
         }
 
         private void OnEnable()
@@ -222,8 +215,7 @@ namespace PassingOverIt.Player
             _orbitalFollow = freeLookCam.GetComponent<CinemachineOrbitalFollow>();
             _axisController = freeLookCam.GetComponent<CinemachineInputAxisController>();
 
-            int id = IsNetworked ? OwnerId : 0;
-            _cameraTargetProxy = new GameObject($"CameraFollowTarget_{id}").transform;
+            _cameraTargetProxy = new GameObject($"CameraFollowTarget_{OwnerId}").transform;
             _cameraTargetProxy.position = transform.position;
             freeLookCam.Target.TrackingTarget = _cameraTargetProxy;
         }
@@ -318,9 +310,7 @@ namespace PassingOverIt.Player
 
             Vector3 dir = GetActionDirection();
             StartDash(dir);
-
-            if (IsNetworked)
-                ServerDashRpc(dir);
+            ServerDashRpc(dir);
         }
 
         /// <summary>Current move direction, or the facing direction when standing still.</summary>
@@ -412,9 +402,7 @@ namespace PassingOverIt.Player
             _canDash = false;
 
             _playerAnimation?.PlayJumpAnimation();
-
-            if (IsNetworked)
-                ServerJumpRpc();
+            ServerJumpRpc();
         }
 
         [ServerRpc]
@@ -473,9 +461,7 @@ namespace PassingOverIt.Player
         {
             Vector3 dir = GetActionDirection();
             BeginDive(dir);
-
-            if (IsNetworked)
-                ServerDiveRpc(dir);
+            ServerDiveRpc(dir);
         }
 
         private void BeginDive(Vector3 dir)

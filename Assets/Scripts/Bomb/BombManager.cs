@@ -145,9 +145,6 @@ namespace PassingOverIt.Bomb
         [ServerRpc(RequireOwnership = false)]
         public void ServerRequestPassBombRpc(int taggerObjectId, int targetObjectId)
         {
-            // If offline test mode (no active server started yet), allow execution
-            bool isNetworkedServer = IsServerStarted;
-
             // Auto-assign bomb to tagger if no holder exists yet
             if (CurrentHolderObjectId.Value < 0)
             {
