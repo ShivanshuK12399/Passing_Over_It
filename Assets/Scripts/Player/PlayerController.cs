@@ -39,6 +39,7 @@ namespace PassingOverIt.Player
         [SerializeField] private float normalControllerHeight = 2f;
         [SerializeField] private float diveControllerHeight = 1f;
         [SerializeField] private LayerMask groundLayerMask = ~0;
+        [SerializeField] private LayerMask playerLayerMask = ~0;
 
         [Header("Camera")]
         public CinemachineCamera freeLookCam;
@@ -98,6 +99,37 @@ namespace PassingOverIt.Player
 
         private readonly Collider[] _passOverlapResults = new Collider[16];
 
+        #region Static Player Registry
+
+        public static readonly System.Collections.Generic.List<PlayerController> AllPlayers = new System.Collections.Generic.List<PlayerController>(16);
+        public static readonly System.Collections.Generic.Dictionary<int, PlayerController> PlayersByObjectId = new System.Collections.Generic.Dictionary<int, PlayerController>(16);
+        public static PlayerController LocalInstance { get; private set; }
+
+        private void RegisterPlayer()
+        {
+            if (!AllPlayers.Contains(this))
+                AllPlayers.Add(this);
+
+            if (ObjectId >= 0)
+                PlayersByObjectId[ObjectId] = this;
+
+            if (IsLocalDriver)
+                LocalInstance = this;
+        }
+
+        private void UnregisterPlayer()
+        {
+            AllPlayers.Remove(this);
+
+            if (ObjectId >= 0)
+                PlayersByObjectId.Remove(ObjectId);
+
+            if (LocalInstance == this)
+                LocalInstance = null;
+        }
+
+        #endregion
+
         #region Public API
 
         /// <summary>True for the owning client, or when running offline.</summary>
@@ -135,12 +167,29 @@ namespace PassingOverIt.Player
                 InitializeLocalPlayer();
         }
 
+        private void OnEnable()
+        {
+            RegisterPlayer();
+        }
+
+        private void OnDisable()
+        {
+            UnregisterPlayer();
+        }
+
         public override void OnStartClient()
         {
             base.OnStartClient();
+            RegisterPlayer();
 
             if (IsOwner)
                 InitializeLocalPlayer();
+        }
+
+        public override void OnStopClient()
+        {
+            base.OnStopClient();
+            UnregisterPlayer();
         }
 
         private void InitializeLocalPlayer()
@@ -181,6 +230,8 @@ namespace PassingOverIt.Player
 
         private void OnDestroy()
         {
+            UnregisterPlayer();
+
             if (!_isInitialized) return;
 
             GameManager.OnControlModeChanged -= HandleControlModeChanged;
@@ -199,6 +250,9 @@ namespace PassingOverIt.Player
         private void Update()
         {
             _isGrounded = CheckIsGrounded();
+
+            if (IsEliminated.Value)
+                return;
 
             if (_isDiving)
             {
@@ -381,6 +435,7 @@ namespace PassingOverIt.Player
             _dashDir = dir;
 
             SetCameraDamping(dashDamping);
+            _playerAnimation?.PlayDashAnimation();
         }
 
         private void HandleDash()
@@ -434,6 +489,8 @@ namespace PassingOverIt.Player
             _diveDir = dir;
             _slipTimer = slipDistance;
             _currentDiveSpeed = 0f;
+
+            _playerAnimation?.PlayDiveAnimation();
         }
 
         private void HandleDive()
@@ -529,7 +586,6 @@ namespace PassingOverIt.Player
         {
             if (!IsLocalDriver || IsEliminated.Value)
             {
-                Debug.Log($"[PlayerController] TryPassBomb ignored: IsLocalDriver={IsLocalDriver}, IsEliminated={IsEliminated.Value}");
                 return;
             }
 
@@ -541,18 +597,17 @@ namespace PassingOverIt.Player
 
             if (!HasBomb)
             {
-                Debug.Log($"[PlayerController] TryPassBomb ignored: Player {ObjectId} does not hold the bomb (CurrentHolder={BombManager.Instance.CurrentHolderObjectId.Value}).");
                 return;
             }
 
-            float searchRadius = 5.0f;
-            float maxAngle = 90f * 0.5f; // 45 degree half-angle
+            float searchRadius = BombManager.Instance.MaxPassDistance;
+            float maxAngle = BombManager.Instance.MaxPassFOVAngle * 0.5f;
 
             PlayerController bestTarget = null;
             float closestDist = float.MaxValue;
 
-            // 1. Try non-alloc physics query across all layers
-            int count = Physics.OverlapSphereNonAlloc(transform.position, searchRadius, _passOverlapResults, ~0, QueryTriggerInteraction.Collide);
+            // 1. Try non-alloc physics query across configured player layers
+            int count = Physics.OverlapSphereNonAlloc(transform.position, searchRadius, _passOverlapResults, playerLayerMask, QueryTriggerInteraction.Collide);
 
             for (int i = 0; i < count; i++)
             {
@@ -577,13 +632,12 @@ namespace PassingOverIt.Player
                 }
             }
 
-            // 2. Fallback: Search scene player objects directly if physics colliders missed
+            // 2. Fallback: Search registered players directly if physics colliders missed
             if (bestTarget == null)
             {
-                PlayerController[] allPlayers = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
-                for (int i = 0; i < allPlayers.Length; i++)
+                for (int i = 0; i < AllPlayers.Count; i++)
                 {
-                    PlayerController p = allPlayers[i];
+                    PlayerController p = AllPlayers[i];
                     if (p == null || p == this || p.IsEliminated.Value) continue;
 
                     Vector3 toTarget = p.transform.position - transform.position;
@@ -604,12 +658,7 @@ namespace PassingOverIt.Player
 
             if (bestTarget != null)
             {
-                Debug.Log($"[PlayerController] Player {ObjectId} passing bomb to target Player {bestTarget.ObjectId} (Distance: {closestDist:F2}m).");
                 BombManager.Instance.ServerRequestPassBombRpc(ObjectId, bestTarget.ObjectId);
-            }
-            else
-            {
-                Debug.Log($"[PlayerController] Player {ObjectId} tried to pass bomb, but no target player was found in front within {searchRadius}m.");
             }
         }
 
@@ -643,7 +692,7 @@ namespace PassingOverIt.Player
             {
                 characterController.enabled = !eliminated;
             }
-            gameObject.SetActive(!eliminated);
+            _playerAnimation?.PlayExplosionAnimation(eliminated);
         }
 
         [Server]
@@ -677,6 +726,7 @@ namespace PassingOverIt.Player
             {
                 transform.position = position;
             }
+            _playerAnimation?.PlayExplosionAnimation(false);
         }
 
         #endregion

@@ -17,19 +17,24 @@ namespace PassingOverIt.Player
         private const float RemoteFallThreshold = 0.1f;
         private const string JumpStartState = "Jump_Start";
 
-        private static readonly int SpeedHash      = Animator.StringToHash("Speed");
-        private static readonly int IsGroundedHash = Animator.StringToHash("IsGrounded");
-        private static readonly int IsJumpingHash  = Animator.StringToHash("IsJumping");
-        private static readonly int IsFallingHash  = Animator.StringToHash("IsFalling");
-        private static readonly int IsDivingHash   = Animator.StringToHash("IsDiving");
-        private static readonly int IsDashingHash  = Animator.StringToHash("IsDashing");
+        private static readonly int SpeedHash          = Animator.StringToHash("Speed");
+        private static readonly int IsGroundedHash     = Animator.StringToHash("IsGrounded");
+        private static readonly int IsJumpingHash      = Animator.StringToHash("IsJumping");
+        private static readonly int IsFallingHash      = Animator.StringToHash("IsFalling");
+        private static readonly int IsDivingHash       = Animator.StringToHash("IsDiving");
+        private static readonly int IsDashingHash      = Animator.StringToHash("IsDashing");
+        private static readonly int KnockedBackHash    = Animator.StringToHash("KnockedBack");
+
+        private static readonly int DashTriggerHash    = Animator.StringToHash("Dash");
+        private static readonly int DiveTriggerHash    = Animator.StringToHash("Dive");
+        private static readonly int ExplodeTriggerHash = Animator.StringToHash("Explode");
 
         private PlayerController _controller;
         private Animator _animator;
 
         // Last values written, to skip redundant Animator writes.
         private float _lastSpeed = -1f;
-        private bool _lastGrounded, _lastJumping, _lastFalling, _lastDiving, _lastDashing;
+        private bool _lastGrounded, _lastJumping, _lastFalling, _lastDiving, _lastDashing, _lastKnockedBack;
 
         private float _smoothedSpeed;
 
@@ -64,6 +69,38 @@ namespace PassingOverIt.Player
             SetBool(IsGroundedHash, false, ref _lastGrounded);
         }
 
+        /// <summary>Triggers the dash animation. Resets dive trigger to ensure mutual exclusion.</summary>
+        public void PlayDashAnimation()
+        {
+            if (_animator == null) return;
+
+            _animator.ResetTrigger(DiveTriggerHash);
+            _animator.SetTrigger(DashTriggerHash);
+        }
+
+        /// <summary>Triggers the dive animation. Resets dash trigger to ensure mutual exclusion.</summary>
+        public void PlayDiveAnimation()
+        {
+            if (_animator == null) return;
+
+            _animator.ResetTrigger(DashTriggerHash);
+            _animator.SetTrigger(DiveTriggerHash);
+        }
+
+        /// <summary>Triggers the explosion knock-back animation and updates KnockedBack state.</summary>
+        public void PlayExplosionAnimation(bool isKnockedBack)
+        {
+            if (_animator == null) return;
+
+            SetBool(KnockedBackHash, isKnockedBack, ref _lastKnockedBack);
+            if (isKnockedBack)
+            {
+                _animator.ResetTrigger(DashTriggerHash);
+                _animator.ResetTrigger(DiveTriggerHash);
+                _animator.SetTrigger(ExplodeTriggerHash);
+            }
+        }
+
         private void Update()
         {
             if (_animator == null) return;
@@ -74,11 +111,12 @@ namespace PassingOverIt.Player
 
             UpdateSpeed(isDriver);
 
-            SetBool(IsGroundedHash, _controller.IsGrounded, ref _lastGrounded);
-            SetBool(IsJumpingHash,  _controller.IsJumping,  ref _lastJumping);
-            SetBool(IsFallingHash,  IsFalling(isDriver),    ref _lastFalling);
-            SetBool(IsDivingHash,   _controller.IsDiving,   ref _lastDiving);
-            SetBool(IsDashingHash,  _controller.IsDashing,  ref _lastDashing);
+            SetBool(IsGroundedHash,  _controller.IsGrounded,            ref _lastGrounded);
+            SetBool(IsJumpingHash,   _controller.IsJumping,             ref _lastJumping);
+            SetBool(IsFallingHash,   IsFalling(isDriver),               ref _lastFalling);
+            SetBool(IsDivingHash,    _controller.IsDiving,              ref _lastDiving);
+            SetBool(IsDashingHash,   _controller.IsDashing,             ref _lastDashing);
+            SetBool(KnockedBackHash, _controller.IsEliminated.Value,    ref _lastKnockedBack);
         }
 
         private void EstimateVelocity()

@@ -58,6 +58,8 @@ namespace PassingOverIt.Bomb
         private int _lastDisplayedSecond = -1;
 
         public GameObject BombPrefab => bombPrefab;
+        public float MaxPassDistance => maxPassDistance;
+        public float MaxPassFOVAngle => maxPassFOVAngle;
 
         private void Awake()
         {
@@ -362,29 +364,35 @@ namespace PassingOverIt.Bomb
 
         #region Helpers
 
+        private readonly List<PlayerController> _activePlayersCache = new List<PlayerController>(16);
+
         public PlayerController GetPlayerByObjectId(int objectId)
         {
             if (objectId < 0) return null;
 
-            PlayerController[] players = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
-            for (int i = 0; i < players.Length; i++)
+            if (PlayerController.PlayersByObjectId.TryGetValue(objectId, out var player))
+                return player;
+
+            for (int i = 0; i < PlayerController.AllPlayers.Count; i++)
             {
-                if (players[i].ObjectId == objectId)
-                    return players[i];
+                PlayerController p = PlayerController.AllPlayers[i];
+                if (p != null && p.ObjectId == objectId)
+                    return p;
             }
+
             return null;
         }
 
         public List<PlayerController> GetAllActivePlayers()
         {
-            List<PlayerController> list = new List<PlayerController>();
-            PlayerController[] players = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
-            for (int i = 0; i < players.Length; i++)
+            _activePlayersCache.Clear();
+            for (int i = 0; i < PlayerController.AllPlayers.Count; i++)
             {
-                if (!players[i].IsEliminated.Value)
-                    list.Add(players[i]);
+                PlayerController p = PlayerController.AllPlayers[i];
+                if (p != null && !p.IsEliminated.Value)
+                    _activePlayersCache.Add(p);
             }
-            return list;
+            return _activePlayersCache;
         }
 
         private Vector3 GetRandomSpawnPosition()

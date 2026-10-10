@@ -125,12 +125,18 @@ public class UIController : MonoBehaviour
 
     private void OnPassButtonClicked()
     {
-        PlayerController[] players = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
-        for (int i = 0; i < players.Length; i++)
+        if (PlayerController.LocalInstance != null)
         {
-            if (players[i].IsLocalDriver)
+            PlayerController.LocalInstance.TryPassBomb();
+            return;
+        }
+
+        for (int i = 0; i < PlayerController.AllPlayers.Count; i++)
+        {
+            PlayerController p = PlayerController.AllPlayers[i];
+            if (p != null && p.IsLocalDriver)
             {
-                players[i].TryPassBomb();
+                p.TryPassBomb();
                 break;
             }
         }
