@@ -11826,14 +11826,12 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 2129283346}
   _networkObjectCache: {fileID: 0}
   bombPrefab: {fileID: 1958074988997733740, guid: 657c85b429e8f9d48aeb63b0d99ba4cd, type: 3}
-  bombTimerDuration: 20
+  bombTimerDuration: 10
   maxPassDistance: 4
   maxPassFOVAngle: 90
   tagImmunityDuration: 1.5
-  respawnDelay: 2
+  newBombDelay: 5
   resetTimerOnPass: 0
-  passAudioClip: {fileID: 0}
-  explosionAudioClip: {fileID: 0}
 --- !u!114 &2129283346
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -30,14 +30,11 @@ namespace PassingOverIt.Bomb
         [SerializeField] private float maxPassFOVAngle = 90f;
         [Tooltip("Tag immunity duration (seconds) to prevent passing back to the previous holder.")]
         [SerializeField] private float tagImmunityDuration = 1.5f;
-        [Tooltip("Delay in seconds before victim respawns after bomb explosion.")]
-        [SerializeField] private float respawnDelay = 2.0f;
+        [Tooltip("Delay in seconds after explosion before a new bomb is assigned.")]
+        [UnityEngine.Serialization.FormerlySerializedAs("respawnDelay")]
+        [SerializeField] private float newBombDelay = 2.5f;
         [Tooltip("If true, passing bomb resets countdown back to full duration. If false, remaining countdown carries over.")]
         [SerializeField] private bool resetTimerOnPass = false;
-
-        [Header("Audio")]
-        [SerializeField] private AudioClip passAudioClip;
-        [SerializeField] private AudioClip explosionAudioClip;
 
         // Synchronized Network State
         public readonly SyncVar<int> CurrentHolderObjectId = new SyncVar<int>(-1);
@@ -53,8 +50,8 @@ namespace PassingOverIt.Bomb
         // Server-only runtime state
         private int _lastHolderObjectId = -1;
         private int _lastPasserObjectId = -1;
+        private bool _wasBombPassedThisRound = false;
         private float _lastPassTime = -999f;
-        private AudioSource _audioSource;
         private int _lastDisplayedSecond = -1;
 
         public GameObject BombPrefab => bombPrefab;
@@ -69,7 +66,6 @@ namespace PassingOverIt.Bomb
                 return;
             }
             Instance = this;
-            _audioSource = GetComponent<AudioSource>();
         }
 
         private void OnEnable()
@@ -151,7 +147,16 @@ namespace PassingOverIt.Bomb
                 CurrentHolderObjectId.Value = taggerObjectId;
                 TimerEndTime.Value = Time.timeAsDouble + bombTimerDuration;
                 IsTimerActive.Value = true;
+                _lastPasserObjectId = -1;
+                _wasBombPassedThisRound = false;
                 Debug.Log($"[BombManager] Auto-assigned bomb to tagger Player {taggerObjectId} before pass.");
+            }
+
+            // Cannot pass bomb to self
+            if (taggerObjectId == targetObjectId)
+            {
+                Debug.LogWarning("[BombManager] Pass rejected: Cannot pass bomb to oneself.");
+                return;
             }
 
             // Validate tagger is current holder
@@ -215,6 +220,7 @@ namespace PassingOverIt.Bomb
         {
             _lastHolderObjectId = tagger.ObjectId;
             _lastPasserObjectId = tagger.ObjectId;
+            _wasBombPassedThisRound = true;
             _lastPassTime = Time.time;
             CurrentHolderObjectId.Value = target.ObjectId;
 
@@ -223,7 +229,6 @@ namespace PassingOverIt.Bomb
                 TimerEndTime.Value = Time.timeAsDouble + bombTimerDuration;
             }
 
-            ObserversPlayPassSoundRpc();
             ObserversNotifyBombPassedRpc(tagger.ObjectId, target.ObjectId);
             Debug.Log($"[BombManager] Bomb passed from Player {tagger.ObjectId} to Player {target.ObjectId}!");
         }
@@ -237,7 +242,11 @@ namespace PassingOverIt.Bomb
             IsTimerActive.Value = false;
 
             PlayerController victim = GetPlayerByObjectId(CurrentHolderObjectId.Value);
-            PlayerController killer = GetPlayerByObjectId(_lastPasserObjectId);
+
+            // Scoring Rule: If no one passed the bomb (victim held it from start), no +1 kill is awarded to anyone.
+            // Only award +1 kill if the bomb was actively passed by another player to the victim this round.
+            bool wasPassedByOther = _wasBombPassedThisRound && _lastPasserObjectId >= 0 && _lastPasserObjectId != CurrentHolderObjectId.Value;
+            PlayerController killer = wasPassedByOther ? GetPlayerByObjectId(_lastPasserObjectId) : null;
 
             if (victim != null)
             {
@@ -247,39 +256,31 @@ namespace PassingOverIt.Bomb
             if (killer != null && killer != victim)
             {
                 killer.AddKill();
-            }
-
-            int victimId = victim != null ? victim.ObjectId : -1;
-            int killerId = killer != null ? killer.ObjectId : -1;
-
-            ObserversPlayExplosionSoundRpc();
-            ObserversNotifyBombExplodedRpc(victimId, killerId);
-
-            CurrentHolderObjectId.Value = -1;
-            _lastHolderObjectId = -1;
-
-            if (victim != null)
-            {
-                StartCoroutine(RespawnVictimAndAssignNewBomb(victim));
+                Debug.Log($"[BombManager] Bomb exploded! Victim: Player {victim?.ObjectId} (+1 Death). Killer: Player {killer.ObjectId} (+1 Kill).");
             }
             else
             {
-                StartCoroutine(DelayAssignNewBomb(respawnDelay));
+                Debug.Log($"[BombManager] Bomb exploded on original holder (Player {victim?.ObjectId}) without pass. Victim: +1 Death. No kill awarded to anyone.");
             }
-        }
 
-        private IEnumerator RespawnVictimAndAssignNewBomb(PlayerController victim)
-        {
-            victim.ServerSetEliminated(true);
+            int victimId = victim != null ? victim.ObjectId : -1;
+            int killerId = (killer != null && killer != victim) ? killer.ObjectId : -1;
 
-            yield return new WaitForSeconds(respawnDelay);
+            ObserversNotifyBombExplodedRpc(victimId, killerId);
 
-            // Teleport to random spawn position
-            Vector3 spawnPos = GetRandomSpawnPosition();
-            victim.ServerRespawnAt(spawnPos);
+            // Clean up round and passer tracking state immediately
+            CurrentHolderObjectId.Value = -1;
+            _lastHolderObjectId = -1;
+            _lastPasserObjectId = -1;
+            _wasBombPassedThisRound = false;
+            _lastPassTime = -999f;
 
-            yield return new WaitForSeconds(0.2f);
-            AssignRandomBomb();
+            if (victim != null)
+            {
+                victim.ServerSetEliminated(true);
+            }
+
+            StartCoroutine(DelayAssignNewBomb(newBombDelay));
         }
 
         private IEnumerator DelayAssignNewBomb(float delay)
@@ -293,6 +294,17 @@ namespace PassingOverIt.Bomb
             if (!IsServerStarted) return;
 
             List<PlayerController> players = GetAllActivePlayers();
+            if (players.Count == 0)
+            {
+                // Fallback: If all active players were temporarily eliminated, inspect all registered players
+                for (int i = 0; i < PlayerController.AllPlayers.Count; i++)
+                {
+                    PlayerController p = PlayerController.AllPlayers[i];
+                    if (p != null)
+                        players.Add(p);
+                }
+            }
+
             if (players.Count == 0) return;
 
             int randomIndex = UnityEngine.Random.Range(0, players.Count);
@@ -301,11 +313,12 @@ namespace PassingOverIt.Bomb
             CurrentHolderObjectId.Value = newHolder.ObjectId;
             _lastHolderObjectId = -1;
             _lastPasserObjectId = -1;
+            _wasBombPassedThisRound = false;
             _lastPassTime = -999f;
             TimerEndTime.Value = Time.timeAsDouble + bombTimerDuration;
             IsTimerActive.Value = true;
 
-            Debug.Log($"[BombManager] New Bomb assigned to Player {newHolder.ObjectId}!");
+            Debug.Log($"[BombManager] New Bomb assigned to Player {newHolder.ObjectId}! (Held from start - no passer)");
         }
 
         #endregion
@@ -337,24 +350,6 @@ namespace PassingOverIt.Bomb
             PlayerController victim = GetPlayerByObjectId(victimId);
             PlayerController killer = GetPlayerByObjectId(killerId);
             OnBombExploded?.Invoke(victim, killer);
-        }
-
-        [ObserversRpc]
-        private void ObserversPlayPassSoundRpc()
-        {
-            if (passAudioClip != null && _audioSource != null)
-            {
-                _audioSource.PlayOneShot(passAudioClip);
-            }
-        }
-
-        [ObserversRpc]
-        private void ObserversPlayExplosionSoundRpc()
-        {
-            if (explosionAudioClip != null && _audioSource != null)
-            {
-                _audioSource.PlayOneShot(explosionAudioClip);
-            }
         }
 
         #endregion

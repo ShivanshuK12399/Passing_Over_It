@@ -29,6 +29,9 @@ namespace PassingOverIt.Player
         private static readonly int DiveTriggerHash    = Animator.StringToHash("Dive");
         private static readonly int ExplodeTriggerHash = Animator.StringToHash("Explode");
 
+        private static readonly int DiveGetUpSpeedHash      = Animator.StringToHash("DiveGetUpSpeed");
+        private static readonly int ExplosionGetUpSpeedHash = Animator.StringToHash("ExplosionGetUpSpeed");
+
         private PlayerController _controller;
         private Animator _animator;
 
@@ -55,6 +58,17 @@ namespace PassingOverIt.Player
 
             // CharacterController.Move() must be the only thing moving the player.
             _animator.applyRootMotion = false;
+
+            ApplyAnimSpeeds();
+        }
+
+        /// <summary>Applies configured animation speed multipliers to Animator parameters.</summary>
+        public void ApplyAnimSpeeds()
+        {
+            if (_animator == null || _controller == null) return;
+
+            _animator.SetFloat(DiveGetUpSpeedHash, _controller.DiveGetUpAnimSpeed);
+            _animator.SetFloat(ExplosionGetUpSpeedHash, _controller.ExplosionGetUpAnimSpeed);
         }
 
         private void OnEnable() => _lastPosition = transform.position;
@@ -83,6 +97,7 @@ namespace PassingOverIt.Player
         {
             if (_animator == null) return;
 
+            ApplyAnimSpeeds();
             _animator.ResetTrigger(DashTriggerHash);
             _animator.SetTrigger(DiveTriggerHash);
         }
@@ -92,6 +107,7 @@ namespace PassingOverIt.Player
         {
             if (_animator == null) return;
 
+            ApplyAnimSpeeds();
             SetBool(KnockedBackHash, isKnockedBack, ref _lastKnockedBack);
             if (isKnockedBack)
             {
@@ -116,7 +132,7 @@ namespace PassingOverIt.Player
             SetBool(IsFallingHash,   IsFalling(isDriver),               ref _lastFalling);
             SetBool(IsDivingHash,    _controller.IsDiving,              ref _lastDiving);
             SetBool(IsDashingHash,   _controller.IsDashing,             ref _lastDashing);
-            SetBool(KnockedBackHash, _controller.IsEliminated.Value,    ref _lastKnockedBack);
+            SetBool(KnockedBackHash, _controller.IsKnockedBack,         ref _lastKnockedBack);
         }
 
         private void EstimateVelocity()

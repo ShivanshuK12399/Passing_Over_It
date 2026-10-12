@@ -114,12 +114,24 @@ MonoBehaviour:
   dashCooldown: 0.3
   diveDistance: 15
   diveGravity: -60
-  slipDistance: 0
+  diveSlideDuration: 1
+  diveGetUpAnimSpeed: 2
   normalControllerHeight: 2
-  diveControllerHeight: 1
+  diveControllerHeight: 2
   groundLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  playerLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  knockbackVerticalForce: 15
+  knockbackHorizontalSpeed: 8.5
+  knockbackGravity: -25
+  slideInitialSpeed: 4
+  slideDeceleration: 4
+  slideDuration: 1
+  lyingStillDuration: 0.5
+  explosionGetUpAnimSpeed: 2
   freeLookCam: {fileID: 0}
   normalDamping: 1
   dashDamping: 0.2
@@ -176,6 +188,8 @@ MonoBehaviour:
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
   - {fileID: 904624871022323811}
+  - {fileID: 7350032204316560949}
+  - {fileID: 8457919460116953013}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -186,7 +200,7 @@ MonoBehaviour:
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
-  _initializedTimestamp: -8584117022707299696
+  _initializedTimestamp: -8584097810848090757
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
   _useRootLevelOfDetail: 1
@@ -226,9 +240,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2836e36774ca1c4bbbee976e17b649c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Component.Transforming.NetworkTransform
-  _componentIndexCache: 255
+  _componentIndexCache: 1
   _addedNetworkObject: {fileID: 3244310570955283893}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 3244310570955283893}
   _componentConfiguration: 1
   _synchronizeParent: 0
   _packing:
@@ -272,9 +286,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8cac635f24954048aad3a6ff9110beb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Component.Animating.NetworkAnimator
-  _componentIndexCache: 255
+  _componentIndexCache: 2
   _addedNetworkObject: {fileID: 3244310570955283893}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 3244310570955283893}
   IgnoredParameters: []
   _animator: {fileID: 2599088604033038839}
   _synchronizeWhenDisabled: 0
