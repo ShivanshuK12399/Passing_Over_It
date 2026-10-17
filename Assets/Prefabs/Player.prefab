@@ -112,7 +112,8 @@ MonoBehaviour:
   landingSpeedMultiplier: 0.3
   landingRecoveryDuration: 0.5
   disableDashDuringLanding: 1
-  minFallSpeedForDeceleration: -2
+  minLandingSpeedForDeceleration: 25
+  printLandingVelocity: 1
   dashSpeed: 30
   dashDuration: 0.3
   dashCooldown: 0.3
@@ -204,7 +205,7 @@ MonoBehaviour:
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
-  _initializedTimestamp: -8584093917032693502
+  _initializedTimestamp: -8584093897521870699
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
   _useRootLevelOfDetail: 1

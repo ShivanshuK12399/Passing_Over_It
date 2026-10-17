@@ -28,6 +28,7 @@ namespace PassingOverIt.Player
         private static readonly int DashTriggerHash    = Animator.StringToHash("Dash");
         private static readonly int DiveTriggerHash    = Animator.StringToHash("Dive");
         private static readonly int ExplodeTriggerHash = Animator.StringToHash("Explode");
+        private static readonly int LandTriggerHash    = Animator.StringToHash("Land");
 
         private static readonly int DiveGetUpSpeedHash      = Animator.StringToHash("DiveGetUpSpeed");
         private static readonly int ExplosionGetUpSpeedHash = Animator.StringToHash("ExplosionGetUpSpeed");
@@ -78,9 +79,18 @@ namespace PassingOverIt.Player
         {
             if (_animator == null) return;
 
+            _animator.ResetTrigger(LandTriggerHash);
             _animator.Play(JumpStartState, 0, 0f);
             SetBool(IsFallingHash, false, ref _lastFalling);
             SetBool(IsGroundedHash, false, ref _lastGrounded);
+        }
+
+        /// <summary>Triggers the land animation on high-velocity impact.</summary>
+        public void PlayLandAnimation()
+        {
+            if (_animator == null) return;
+
+            _animator.SetTrigger(LandTriggerHash);
         }
 
         /// <summary>Triggers the dash animation. Resets dive trigger to ensure mutual exclusion.</summary>
@@ -89,6 +99,7 @@ namespace PassingOverIt.Player
             if (_animator == null) return;
 
             _animator.ResetTrigger(DiveTriggerHash);
+            _animator.ResetTrigger(LandTriggerHash);
             _animator.SetTrigger(DashTriggerHash);
         }
 
@@ -99,6 +110,7 @@ namespace PassingOverIt.Player
 
             ApplyAnimSpeeds();
             _animator.ResetTrigger(DashTriggerHash);
+            _animator.ResetTrigger(LandTriggerHash);
             _animator.SetTrigger(DiveTriggerHash);
         }
 
@@ -113,6 +125,7 @@ namespace PassingOverIt.Player
             {
                 _animator.ResetTrigger(DashTriggerHash);
                 _animator.ResetTrigger(DiveTriggerHash);
+                _animator.ResetTrigger(LandTriggerHash);
                 _animator.SetTrigger(ExplodeTriggerHash);
             }
         }

@@ -31,8 +31,8 @@ namespace PassingOverIt.Player
         [SerializeField, Min(0.05f)] private float landingRecoveryDuration = 0.45f;
         [Tooltip("If true, dashing is disabled while recovering from landing deceleration.")]
         [SerializeField] private bool disableDashDuringLanding = true;
-        [Tooltip("Minimum total landing velocity (m/s) required to trigger landing deceleration.")]
-        [SerializeField] private float minLandingSpeedForDeceleration = 25f;
+        [Tooltip("Minimum downward vertical velocity magnitude (m/s) required to trigger landing deceleration and impact animation.")]
+        [SerializeField] private float minVerticalSpeedForLanding = 22f;
 
         [Header("Debugging Tools")]
         [Tooltip("If true, prints the landing velocity magnitude to the Console upon landing.")]
@@ -357,16 +357,24 @@ namespace PassingOverIt.Player
             {
                 Vector3 horiz = new Vector3(characterController.velocity.x, 0f, characterController.velocity.z);
                 float vertical = _verticalSpeed;
+                float verticalMag = Mathf.Abs(vertical);
                 float horizontal = horiz.magnitude;
                 float total = Mathf.Sqrt(horizontal * horizontal + vertical * vertical);
-                bool shouldDecelerate = _divePhase == DivePhase.None && !_isDiving && _knockbackPhase == KnockbackPhase.None && total > minLandingSpeedForDeceleration;
+                bool isHardLanding = verticalMag > minVerticalSpeedForLanding;
+                bool shouldDecelerate = _divePhase == DivePhase.None && !_isDiving && _knockbackPhase == KnockbackPhase.None && isHardLanding;
+
+                if (isHardLanding && _divePhase == DivePhase.None && !_isDiving && _knockbackPhase == KnockbackPhase.None)
+                {
+                    _playerAnimation?.PlayLandAnimation();
+                    ServerLandRpc();
+                }
 
                 if (IsLocalDriver && printLandingVelocity)
                 {
-                    if (total > minLandingSpeedForDeceleration)
-                        Debug.Log($"Velocity magnitude : {total:F1} - Deceleration Triggered");
+                    if (isHardLanding)
+                        Debug.Log($"Velocity magnitude : {total:F1} (Vertical: {vertical:F1}, Horizontal: {horizontal:F1}) - Deceleration Triggered");
                     else
-                        Debug.Log($"Velocity magnitude : {total:F1}");
+                        Debug.Log($"Velocity magnitude : {total:F1} (Vertical: {vertical:F1}, Horizontal: {horizontal:F1})");
                 }
 
                 if (shouldDecelerate)
@@ -573,6 +581,12 @@ namespace PassingOverIt.Player
 
         [ObserversRpc(ExcludeOwner = true)]
         private void ObserversJumpRpc() => _playerAnimation?.PlayJumpAnimation();
+
+        [ServerRpc]
+        private void ServerLandRpc() => ObserversLandRpc();
+
+        [ObserversRpc(ExcludeOwner = true)]
+        private void ObserversLandRpc() => _playerAnimation?.PlayLandAnimation();
 
         #endregion
 
