@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using PassingOverIt.Player;
 
 /// <summary>
 /// Core Game Manager singleton. Holds global state such as control mode (Touch vs Keyboard)

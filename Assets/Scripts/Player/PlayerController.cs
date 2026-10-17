@@ -252,6 +252,8 @@ namespace PassingOverIt.Player
         public override void OnStopClient()
         {
             base.OnStopClient();
+            if (IsOwner)
+                CursorManager.UnlockCursor();
             UnregisterPlayer();
         }
 
@@ -268,8 +270,16 @@ namespace PassingOverIt.Player
             SetupCamera();
 
             GameManager.OnControlModeChanged += HandleControlModeChanged;
+            CursorManager.OnCursorLockStateChanged += HandleCursorLockChanged;
             if (GameManager.Instance != null)
                 HandleControlModeChanged(GameManager.Instance.UseTouchControls);
+
+            if (CursorManager.ShouldLockCursor())
+                CursorManager.LockCursor();
+            else
+                CursorManager.UnlockCursor();
+
+            UpdateAxisControllerState();
         }
 
         private void SetupCamera()
@@ -284,6 +294,7 @@ namespace PassingOverIt.Player
 
             _orbitalFollow = freeLookCam.GetComponent<CinemachineOrbitalFollow>();
             _axisController = freeLookCam.GetComponent<CinemachineInputAxisController>();
+            UpdateAxisControllerState();
 
             _cameraTargetProxy = new GameObject($"CameraFollowTarget_{OwnerId}").transform;
             _cameraTargetProxy.position = transform.position;
@@ -297,9 +308,13 @@ namespace PassingOverIt.Player
             if (!_isInitialized) return;
 
             GameManager.OnControlModeChanged -= HandleControlModeChanged;
+            CursorManager.OnCursorLockStateChanged -= HandleCursorLockChanged;
 
             _inputActions.Player.Disable();
             _inputActions.Dispose();
+
+            if (IsOwner)
+                CursorManager.UnlockCursor();
 
             if (_cameraTargetProxy != null)
                 Destroy(_cameraTargetProxy.gameObject);
@@ -339,7 +354,8 @@ namespace PassingOverIt.Player
                 HandleMovement();
                 HandleDashCooldown();
 
-                if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+                bool canPass = !CursorManager.IsEnabled || CursorManager.IsCursorLocked;
+                if (canPass && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
                 {
                     TryPassBomb();
                 }
@@ -368,10 +384,22 @@ namespace PassingOverIt.Player
 
         #region Input
 
+        private void UpdateAxisControllerState()
+        {
+            if (_axisController == null) return;
+            bool isTouch = GameManager.Instance != null && GameManager.Instance.UseTouchControls;
+            bool cursorAllowsLook = !CursorManager.IsEnabled || CursorManager.IsCursorLocked;
+            _axisController.enabled = !isTouch && cursorAllowsLook;
+        }
+
         private void HandleControlModeChanged(bool isTouchEnabled)
         {
-            if (_axisController != null)
-                _axisController.enabled = !isTouchEnabled;
+            UpdateAxisControllerState();
+        }
+
+        private void HandleCursorLockChanged(bool isLocked)
+        {
+            UpdateAxisControllerState();
         }
 
         private void OnJumpInput(InputAction.CallbackContext context)
