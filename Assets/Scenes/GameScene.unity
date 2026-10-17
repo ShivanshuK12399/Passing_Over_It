@@ -1095,14 +1095,14 @@ MonoBehaviour:
   Radius: 10
   Orbits:
     Top:
-      Radius: 9
+      Radius: 8
       Height: 6
     Center:
-      Radius: 8.5
-      Height: 1
-    Bottom:
       Radius: 8
-      Height: 0
+      Height: 3
+    Bottom:
+      Radius: 7
+      Height: -0.5
     SplineCurvature: 0
   RecenteringTarget: 2
   HorizontalAxis:
@@ -4977,7 +4977,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1047167535}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 05312881a022449a88a42af5353f8ed7, type: 3}
   m_Name: 
@@ -5794,7 +5794,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1174010326
 RectTransform:
   m_ObjectHideFlags: 0

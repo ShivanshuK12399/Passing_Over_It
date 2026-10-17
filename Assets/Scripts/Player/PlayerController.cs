@@ -24,6 +24,20 @@ namespace PassingOverIt.Player
         [SerializeField] private float fallGravity = -100f;
         [SerializeField] private float groundedGravity = -10f;
 
+        [Header("Landing Deceleration")]
+        [Tooltip("Speed multiplier applied immediately upon landing from a jump/fall (e.g. 0.75 = 75% speed).")]
+        [SerializeField, Range(0.1f, 1f)] private float landingSpeedMultiplier = 0.75f;
+        [Tooltip("Duration in seconds to smoothly recover back to 100% running speed.")]
+        [SerializeField, Min(0.05f)] private float landingRecoveryDuration = 0.45f;
+        [Tooltip("If true, dashing is disabled while recovering from landing deceleration.")]
+        [SerializeField] private bool disableDashDuringLanding = true;
+        [Tooltip("Minimum total landing velocity (m/s) required to trigger landing deceleration.")]
+        [SerializeField] private float minLandingSpeedForDeceleration = 25f;
+
+        [Header("Debugging Tools")]
+        [Tooltip("If true, prints the landing velocity magnitude to the Console upon landing.")]
+        [SerializeField] private bool printLandingVelocity = false;
+
         [Header("Dash")]
         [SerializeField] private float dashSpeed = 20f;
         [SerializeField] private float dashDuration = 0.3f;
@@ -94,6 +108,10 @@ namespace PassingOverIt.Player
         // Vertical movement
         private float _verticalSpeed;
         private bool _isJumpPressed, _isJumping;
+
+        // Landing deceleration
+        private float _landingTimer;
+        private bool _wasGrounded = true;
 
         // Dash
         private bool _isDashing, _canDash = true;
@@ -214,7 +232,13 @@ namespace PassingOverIt.Player
                     return 0f;
                 }
 
-                return _moveInput.magnitude;
+                float mag = _moveInput.magnitude;
+                if (_landingTimer > 0f && mag > 0f)
+                {
+                    float t = 1f - Mathf.Clamp01(_landingTimer / Mathf.Max(0.01f, landingRecoveryDuration));
+                    mag *= Mathf.Lerp(landingSpeedMultiplier, 1f, t);
+                }
+                return mag;
             }
         }
 
@@ -328,6 +352,30 @@ namespace PassingOverIt.Player
         {
             _isGrounded = CheckIsGrounded();
 
+            bool justLanded = !_wasGrounded && _isGrounded;
+            if (justLanded)
+            {
+                Vector3 horiz = new Vector3(characterController.velocity.x, 0f, characterController.velocity.z);
+                float vertical = _verticalSpeed;
+                float horizontal = horiz.magnitude;
+                float total = Mathf.Sqrt(horizontal * horizontal + vertical * vertical);
+                bool shouldDecelerate = _divePhase == DivePhase.None && !_isDiving && _knockbackPhase == KnockbackPhase.None && total > minLandingSpeedForDeceleration;
+
+                if (IsLocalDriver && printLandingVelocity)
+                {
+                    if (total > minLandingSpeedForDeceleration)
+                        Debug.Log($"Velocity magnitude : {total:F1} - Deceleration Triggered");
+                    else
+                        Debug.Log($"Velocity magnitude : {total:F1}");
+                }
+
+                if (shouldDecelerate)
+                {
+                    _landingTimer = landingRecoveryDuration;
+                }
+            }
+            _wasGrounded = _isGrounded;
+
             if (_knockbackPhase != KnockbackPhase.None)
             {
                 HandleKnockback();
@@ -411,6 +459,7 @@ namespace PassingOverIt.Player
         private void OnDashInput(InputAction.CallbackContext context)
         {
             if (!_canDash || _isDashing || _isDiving || _divePhase != DivePhase.None || _knockbackPhase != KnockbackPhase.None) return;
+            if (disableDashDuringLanding && _landingTimer > 0f) return;
 
             Vector3 dir = GetActionDirection();
             StartDash(dir);
@@ -451,7 +500,15 @@ namespace PassingOverIt.Player
                 _moveDir = Vector3.zero;
             }
 
-            Vector3 velocity = _moveDir * moveSpeed + Vector3.up * UpdateVerticalSpeed();
+            float speedMultiplier = 1f;
+            if (_landingTimer > 0f)
+            {
+                _landingTimer -= Time.deltaTime;
+                float t = 1f - Mathf.Clamp01(_landingTimer / Mathf.Max(0.01f, landingRecoveryDuration));
+                speedMultiplier = Mathf.Lerp(landingSpeedMultiplier, 1f, t);
+            }
+
+            Vector3 velocity = _moveDir * (moveSpeed * speedMultiplier) + Vector3.up * UpdateVerticalSpeed();
             characterController.Move(velocity * Time.deltaTime);
         }
 
@@ -505,6 +562,7 @@ namespace PassingOverIt.Player
             _verticalSpeed = jumpHeight;
             _isJumping = true;
             _canDash = false;
+            _landingTimer = 0f;
 
             _playerAnimation?.PlayJumpAnimation();
             ServerJumpRpc();
@@ -526,6 +584,7 @@ namespace PassingOverIt.Player
             _canDash = false;
             _dashTimer = dashDuration;
             _dashDir = dir;
+            _landingTimer = 0f;
 
             SetCameraDamping(dashDamping);
             _playerAnimation?.PlayDashAnimation();
@@ -581,6 +640,7 @@ namespace PassingOverIt.Player
 
             _diveDir = dir;
             _currentDiveSpeed = 0f;
+            _landingTimer = 0f;
 
             _playerAnimation?.PlayDiveAnimation();
         }
@@ -837,6 +897,7 @@ namespace PassingOverIt.Player
             _canDive = false;
             _canDash = false;
             _divePhase = DivePhase.None;
+            _landingTimer = 0f;
 
             if (characterController != null)
             {

@@ -103,12 +103,16 @@ MonoBehaviour:
   _componentIndexCache: 0
   _addedNetworkObject: {fileID: 3244310570955283893}
   _networkObjectCache: {fileID: 3244310570955283893}
-  moveSpeed: 10
+  moveSpeed: 12
   turningTime: 0.1
-  jumpHeight: 20
+  jumpHeight: 18
   jumpGravity: -50
   fallGravity: -80
   groundedGravity: -10
+  landingSpeedMultiplier: 0.3
+  landingRecoveryDuration: 0.5
+  disableDashDuringLanding: 1
+  minFallSpeedForDeceleration: -2
   dashSpeed: 30
   dashDuration: 0.3
   dashCooldown: 0.3
@@ -136,7 +140,7 @@ MonoBehaviour:
   normalDamping: 1
   dashDamping: 0.2
   useDeadZone: 1
-  deadZoneSize: {x: 0, y: 1.5, z: 0}
+  deadZoneSize: {x: 0, y: 2, z: 0}
   snapDeadZoneOnDash: 1
   showDeadZoneGizmos: 1
   characterController: {fileID: 1903174716742631372}
@@ -200,7 +204,7 @@ MonoBehaviour:
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
-  _initializedTimestamp: -8584097810848090757
+  _initializedTimestamp: -8584093917032693502
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
   _useRootLevelOfDetail: 1
