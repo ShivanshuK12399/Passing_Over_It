@@ -4954,7 +4954,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56e9db29b794fac46b6cc9ac599baa3f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  useTouchControls: 0
+  useTouchControls: 1
 --- !u!4 &1047167537
 Transform:
   m_ObjectHideFlags: 0
@@ -5794,7 +5794,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1174010326
 RectTransform:
   m_ObjectHideFlags: 0
@@ -11839,7 +11839,7 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 2129283346}
   _networkObjectCache: {fileID: 0}
   bombPrefab: {fileID: 1958074988997733740, guid: 657c85b429e8f9d48aeb63b0d99ba4cd, type: 3}
-  bombTimerDuration: 10
+  bombTimerDuration: 5
   maxPassDistance: 4
   maxPassFOVAngle: 90
   tagImmunityDuration: 1.5

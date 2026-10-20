@@ -18,7 +18,7 @@ namespace PassingOverIt.Player
     {
         [Header("Movement")]
         [SerializeField] private float moveSpeed = 5f;
-        [SerializeField] private float turningTime = 0.1f;
+        [SerializeField] private float turnSpeed = 15f;
         [SerializeField] private float jumpHeight = 20f;   // Used as the initial jump velocity.
         [SerializeField] private float jumpGravity = -80f;
         [SerializeField] private float fallGravity = -100f;
@@ -60,9 +60,7 @@ namespace PassingOverIt.Player
         [SerializeField] private float knockbackHorizontalSpeed = 8.5f;
         [SerializeField] private float knockbackGravity = -25f;
         [SerializeField] private float slideInitialSpeed = 4f;
-        [SerializeField] private float slideDeceleration = 4f;
         [SerializeField] private float slideDuration = 1.0f;
-        [SerializeField] private float lyingStillDuration = 0.5f;
         [SerializeField, Min(0.1f)] private float explosionGetUpAnimSpeed = 1f; // Speed multiplier for Explosion_GetUp animation.
 
         [Header("Camera")]
@@ -102,7 +100,6 @@ namespace PassingOverIt.Player
         // Locomotion
         private Vector2 _moveInput;
         private Vector3 _moveDir;
-        private float _turnVelocity;
         private bool _isGrounded;
 
         // Vertical movement
@@ -138,7 +135,6 @@ namespace PassingOverIt.Player
             None,
             Airborne,
             Sliding,
-            LyingStill,
             GettingUp
         }
 
@@ -497,8 +493,8 @@ namespace PassingOverIt.Player
 
                 if (!_isRecoveringRotation)
                 {
-                    float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref _turnVelocity, turningTime);
-                    transform.rotation = Quaternion.Euler(0f, angle, 0f);
+                    Quaternion targetRot = Quaternion.Euler(0f, targetAngle, 0f);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, turnSpeed * Time.deltaTime);
                 }
 
                 _moveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
@@ -947,27 +943,13 @@ namespace PassingOverIt.Player
 
                 case KnockbackPhase.Sliding:
                     _knockbackTimer -= Time.deltaTime;
-                    _currentSlideSpeed = Mathf.MoveTowards(_currentSlideSpeed, 0f, slideDeceleration * Time.deltaTime);
+                    float slideProgress = Mathf.Clamp01(1f - (_knockbackTimer / Mathf.Max(0.001f, slideDuration)));
+                    _currentSlideSpeed = Mathf.Lerp(slideInitialSpeed, 0f, slideProgress);
 
                     if (IsLocalDriver)
                     {
                         Vector3 velocity = (_knockbackDir * _currentSlideSpeed) + (Vector3.up * groundedGravity);
                         characterController.Move(velocity * Time.deltaTime);
-                    }
-
-                    if (_knockbackTimer <= 0f)
-                    {
-                        _knockbackPhase = KnockbackPhase.LyingStill;
-                        _knockbackTimer = lyingStillDuration;
-                    }
-                    break;
-
-                case KnockbackPhase.LyingStill:
-                    _knockbackTimer -= Time.deltaTime;
-
-                    if (IsLocalDriver)
-                    {
-                        characterController.Move(Vector3.up * (groundedGravity * Time.deltaTime));
                     }
 
                     if (_knockbackTimer <= 0f)

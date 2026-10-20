@@ -18,6 +18,9 @@ namespace PassingOverIt.Networking
         [SerializeField] private Button copyInfoButton;
 
         private TimeManager timeManager;
+        private float _pingUpdateTimer;
+        private long _lastPingMs = -1;
+        private const float PingUpdateInterval = 0.25f;
 
         private void Start()
         {
@@ -37,10 +40,18 @@ namespace PassingOverIt.Networking
 
         private void Update()
         {
-            if (pingText != null && timeManager != null)
+            if (pingText == null || timeManager == null) return;
+
+            _pingUpdateTimer -= Time.deltaTime;
+            if (_pingUpdateTimer <= 0f)
             {
+                _pingUpdateTimer = PingUpdateInterval;
                 long roundTripTimeMs = timeManager.RoundTripTime;
-                pingText.text = $"Ping: {roundTripTimeMs} ms";
+                if (roundTripTimeMs != _lastPingMs)
+                {
+                    _lastPingMs = roundTripTimeMs;
+                    pingText.SetText("Ping: {0} ms", roundTripTimeMs);
+                }
             }
         }
 

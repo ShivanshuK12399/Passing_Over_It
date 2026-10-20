@@ -104,7 +104,7 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 3244310570955283893}
   _networkObjectCache: {fileID: 3244310570955283893}
   moveSpeed: 12
-  turningTime: 0.1
+  turnSpeed: 13
   jumpHeight: 18
   jumpGravity: -50
   fallGravity: -80
@@ -112,7 +112,7 @@ MonoBehaviour:
   landingSpeedMultiplier: 0.3
   landingRecoveryDuration: 0.5
   disableDashDuringLanding: 1
-  minLandingSpeedForDeceleration: 25
+  minVerticalSpeedForLanding: 22
   printLandingVelocity: 1
   dashSpeed: 30
   dashDuration: 0.3
@@ -120,7 +120,7 @@ MonoBehaviour:
   diveDistance: 15
   diveGravity: -60
   diveSlideDuration: 1
-  diveGetUpAnimSpeed: 2
+  diveGetUpAnimSpeed: 3
   normalControllerHeight: 2
   diveControllerHeight: 2
   groundLayerMask:
@@ -132,10 +132,8 @@ MonoBehaviour:
   knockbackVerticalForce: 15
   knockbackHorizontalSpeed: 8.5
   knockbackGravity: -25
-  slideInitialSpeed: 4
-  slideDeceleration: 4
-  slideDuration: 1
-  lyingStillDuration: 0.5
+  slideInitialSpeed: 10
+  slideDuration: 1.5
   explosionGetUpAnimSpeed: 2
   freeLookCam: {fileID: 0}
   normalDamping: 1
@@ -205,7 +203,7 @@ MonoBehaviour:
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
-  _initializedTimestamp: -8584093897521870699
+  _initializedTimestamp: -8584092204490760225
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
   _useRootLevelOfDetail: 1
