@@ -31,14 +31,6 @@ public class GameManager : MonoBehaviour
             }
         }
     }
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void InitializeApplicationPerformance()
-    {
-        QualitySettings.vSyncCount = 0;
-        Application.targetFrameRate = 60;
-    }
-
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -47,9 +39,6 @@ public class GameManager : MonoBehaviour
             return;
         }
         Instance = this;
-        
-        QualitySettings.vSyncCount = 0;
-        Application.targetFrameRate = 60;
     }
 
     private void Start()
